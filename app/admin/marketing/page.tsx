@@ -13,12 +13,12 @@ export default function AdminMarketing() {
       <p className="eyebrow">Acquisition Algérie</p>
       <h1 className="section-title mt-1">Marketing et publicité</h1>
       <p className="section-sub">Facebook et TikTok : clics à 0,10 – 0,20 $, 25-34 ans les plus rentables, relance +35 %.</p>
-      <div className="grid md:grid-cols-2 gap-4 mt-6 items-start">
+      <div className="grid lg:grid-cols-2 gap-4 mt-5 md:mt-6 items-start">
         {CARDS.map((c) => (
           <div key={c.t} className="card-soft p-6">
-            <p className="font-title font-semibold flex items-center gap-2.5"><span className="w-9 h-9 rounded-xl bg-[#eef0ff] text-[#5b6cff] flex items-center justify-center"><c.icon size={16} /></span>{c.t}</p>
-            <ul className="text-[13px] font-light text-gray-600 mt-4 space-y-2 leading-relaxed">
-              {c.items.map((i) => <li key={i} className="flex gap-2"><span className="text-[#6c4dff] font-bold">•</span>{i}</li>)}
+            <p className="font-title font-semibold flex items-center gap-2.5"><span className="w-9 h-9 rounded-xl bg-[#efe9d8] text-[#7a5a28] flex items-center justify-center"><c.icon size={16} /></span>{c.t}</p>
+            <ul className="text-[13px] font-light text-stone-600 mt-4 space-y-2 leading-relaxed">
+              {c.items.map((i) => <li key={i} className="flex gap-2"><span className="text-[#a06a2c] font-bold">•</span>{i}</li>)}
             </ul>
             {c.t.startsWith("Promotions") && <button className="btn-dark mt-4 !py-2.5">+ Nouvelle promo</button>}
           </div>

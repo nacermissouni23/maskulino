@@ -9,22 +9,22 @@ const POSTS = [
 
 export default function NewsPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
+    <div className="container-x py-10 md:py-14">
       <p className="eyebrow text-center">Le blog Maskulino</p>
       <h1 className="section-title text-center mt-2">Actualités et conseils</h1>
       <p className="section-sub text-center">Guides des tailles • Coulisses • Conseils livraison</p>
-      <div className="grid md:grid-cols-3 gap-4 mt-8">
+      <div className="grid md:grid-cols-3 gap-4 md:gap-5 mt-6 md:mt-8">
         {POSTS.map((p) => (
-          <article key={p.title} className="card-soft overflow-hidden !p-0 group">
-            <span className="block relative aspect-[16/10] overflow-hidden">
+          <article key={p.title} className="card-soft overflow-hidden group">
+            <span className="block relative aspect-[16/10] overflow-hidden bg-[#ece7d9]">
               <Image src={p.img} alt={p.title} fill className="object-cover group-hover:scale-105 transition duration-500" />
               <span className="absolute top-3 left-3 text-[10px] font-semibold bg-white/95 px-2.5 py-1 rounded-full">{p.tag}</span>
             </span>
             <div className="p-5">
-              <p className="text-[11px] font-medium tracking-wider text-gray-400">{p.date} • MASKULINO</p>
+              <p className="text-[11px] font-medium tracking-wider text-stone-400">{p.date} • MASKULINO</p>
               <p className="font-title font-semibold mt-1.5 leading-snug">{p.title}</p>
-              <p className="text-sm font-light text-gray-500 mt-1.5 leading-relaxed">{p.extrait}</p>
-              <Link href="/shop" className="label-bold text-[#6c4dff] mt-3 inline-block hover:underline underline-offset-4">Lire l'article →</Link>
+              <p className="text-sm font-light text-stone-500 mt-1.5 leading-relaxed">{p.extrait}</p>
+              <Link href="/shop" className="label-bold text-[#1c1b18] mt-3 inline-block hover:underline underline-offset-4">Lire l'article →</Link>
             </div>
           </article>
         ))}

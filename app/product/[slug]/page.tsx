@@ -10,12 +10,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!p) return notFound();
   const related = PRODUCTS.filter((x) => x.category === p.category && x.slug !== p.slug).slice(0, 4);
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <p className="text-xs font-light text-gray-400"><Link href="/" className="hover:text-black">Accueil</Link> / <Link href="/shop" className="hover:text-black">Boutique</Link> / <span className="font-medium text-gray-600">{p.name}</span></p>
+    <div className="container-x py-8 md:py-12">
+      <p className="text-xs font-light text-stone-400"><Link href="/" className="hover:text-black">Accueil</Link> / <Link href="/shop" className="hover:text-black">Boutique</Link> / <span className="font-medium text-stone-600">{p.name}</span></p>
       <ProductDetailClient slug={p.slug} />
-      <h2 className="section-title mt-16">Vous aimerez aussi</h2>
+      <h2 className="section-title mt-14 md:mt-20">Vous aimerez aussi</h2>
       <p className="section-sub">Sélection dans la même catégorie</p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mt-5 md:mt-6">
         {related.map((r) => <ProductCard key={r.slug} p={r} />)}
       </div>
     </div>

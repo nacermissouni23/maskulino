@@ -2,17 +2,20 @@
 
 @theme {
   --font-sans: "Poppins", system-ui, -apple-system, sans-serif;
-  --color-ink: #14142b;
-  --color-muted: #6b6f8a;
-  --color-lav: #f5f4ff;
-  --color-grad-a: #8b9bff;
-  --color-grad-b: #6fc3f0;
-  --color-accent: #6c4dff;
+  --color-paper: #f5f3ee;
+  --color-surface: #ffffff;
+  --color-ink: #1c1b18;
+  --color-muted: #6f6a5e;
+  --color-faint: #a8a29a;
+  --color-line: #e8e3d8;
+  --color-bronze: #a06a2c;
+  --color-success: #20744d;
+  --color-danger: #c0452f;
 }
 
 :root {
-  --background: #f6f5ff;
-  --foreground: #14142b;
+  --background: #f5f3ee;
+  --foreground: #1c1b18;
 }
 
 html {
@@ -20,40 +23,58 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(1200px 500px at 10% -5%, #e3ecff 0%, transparent 60%),
-    radial-gradient(900px 500px at 95% 10%, #efe6ff 0%, transparent 60%),
-    #fbfbff;
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-weight: 400;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ===== Système typographique Poppins ===== */
+/* ===== Conteneur + rythme vertical (PC d'abord, mobile ensuite) ===== */
+.container-x {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 768px) {
+  .container-x {
+    padding-inline: 2rem;
+  }
+}
+
+.section {
+  padding-block: 2.75rem;
+}
+@media (min-width: 768px) {
+  .section {
+    padding-block: 4.5rem;
+  }
+}
+
+/* ===== Typographie Poppins ===== */
 .font-display {
   font-family: var(--font-sans);
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.08;
+  line-height: 1.1;
 }
 .font-title {
   font-family: var(--font-sans);
   font-weight: 600;
   letter-spacing: -0.01em;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .eyebrow {
   font-weight: 600;
   font-size: 11px;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #6c4dff;
+  color: var(--color-bronze);
 }
 .body-light {
   font-weight: 300;
-  color: #6b6f8a;
-  line-height: 1.7;
+  color: var(--color-muted);
+  line-height: 1.75;
 }
 .body-regular {
   font-weight: 400;
@@ -69,81 +90,92 @@ body {
   font-weight: 700;
   letter-spacing: -0.01em;
 }
+.section-title {
+  font-weight: 700;
+  font-size: clamp(26px, 3vw, 36px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.section-sub {
+  font-weight: 300;
+  font-size: 14px;
+  color: var(--color-muted);
+  margin-top: 8px;
+}
 
 /* ===== Boutons ===== */
 .btn-fluid {
-  background: linear-gradient(90deg, #8b9bff 0%, #6fc3f0 100%);
-  color: white;
+  background: var(--color-ink);
+  color: #fff;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   font-size: 12px;
-  padding: 13px 28px;
+  padding: 14px 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 12px;
-  box-shadow: 0 10px 26px rgba(108, 77, 255, 0.28);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(28, 27, 24, 0.18);
+  transition: transform 0.15s ease, background 0.15s ease;
   text-transform: uppercase;
 }
 .btn-fluid:hover {
-  filter: brightness(1.06);
+  background: #000;
   transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(108, 77, 255, 0.34);
 }
 .btn-fluid:active {
   transform: translateY(0);
 }
 
 .btn-dark {
-  background: #14142b;
-  color: white;
+  background: var(--color-ink);
+  color: #fff;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   font-size: 12px;
-  padding: 13px 24px;
+  padding: 14px 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 12px;
+  border-radius: 10px;
   text-transform: uppercase;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 .btn-dark:hover { background: #000; transform: translateY(-1px); }
 
 .btn-ghost {
-  border: 1.5px solid #14142b;
-  color: #14142b;
+  border: 1.5px solid var(--color-ink);
+  color: var(--color-ink);
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   font-size: 12px;
-  padding: 12px 22px;
+  padding: 13px 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 12px;
+  border-radius: 10px;
   text-transform: uppercase;
   background: transparent;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.btn-ghost:hover { background: #14142b; color: #fff; }
+.btn-ghost:hover { background: var(--color-ink); color: #fff; }
 
-/* ===== Cartes ===== */
+/* ===== Cartes + champs ===== */
 .card-soft {
-  background: white;
-  border: 1px solid #eceafa;
-  box-shadow: 0 12px 34px rgba(80, 80, 160, 0.08);
-  border-radius: 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 10px 28px rgba(28, 27, 24, 0.06);
+  border-radius: 16px;
 }
 
 .input-soft {
   width: 100%;
   height: 48px;
-  border: 1.5px solid #e5e3f5;
-  border-radius: 12px;
+  border: 1.5px solid var(--color-line);
+  border-radius: 10px;
   padding: 0 14px;
   font-size: 14px;
   font-weight: 400;
@@ -152,34 +184,18 @@ body {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input-soft:focus {
-  border-color: #6c4dff;
-  box-shadow: 0 0 0 3px rgba(108, 77, 255, 0.12);
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 3px rgba(28, 27, 24, 0.08);
 }
-.input-soft::placeholder { color: #a5a8c0; font-weight: 300; }
-
-.section-title {
-  font-weight: 700;
-  font-size: clamp(24px, 3.4vw, 36px);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-}
-.section-sub {
-  font-weight: 300;
-  font-size: 14px;
-  color: #6b6f8a;
-  margin-top: 6px;
-}
+.input-soft::placeholder { color: var(--color-faint); font-weight: 300; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.hero-grid-bg {
-  background-image:
-    linear-gradient(#e9e7ff 1px, transparent 1px),
-    linear-gradient(90deg, #e9e7ff 1px, transparent 1px);
-  background-size: 36px 36px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 60%, transparent 100%);
-  opacity: 0.35;
+.hero-wash {
+  background:
+    radial-gradient(700px 380px at 85% 10%, #ece5d3 0%, transparent 65%),
+    radial-gradient(600px 420px at 5% 90%, #e9e2d2 0%, transparent 60%);
 }
 
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
