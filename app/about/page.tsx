@@ -1,0 +1,44 @@
+import Image from "next/image";
+import Link from "next/link";
+
+export default function AboutPage() {
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <p className="eyebrow">Fabriqué à Alger • Depuis 2023</p>
+      <h1 className="section-title mt-2 max-w-xl">Maskulino — la mode homme, payée à la livraison.</h1>
+      <div className="grid md:grid-cols-2 gap-10 items-center mt-8">
+        <div className="card-soft overflow-hidden !p-0">
+          <Image src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=800&q=80" alt="Boutique Maskulino à Alger" width={700} height={800} className="object-cover aspect-[4/5] w-full" />
+        </div>
+        <div>
+          <p className="body-light text-[15px]">
+            Tout a commencé sur Facebook avec 20 sweats à Didouche Mourad. Aujourd'hui, plus de
+            12 000 clients dans 58 wilayas, une équipe de confirmation WhatsApp en moins de 4 h,
+            et un principe simple : <span className="font-medium text-gray-800">vous ne payez que si l'article vous plaît à la réception.</span>
+          </p>
+          <p className="body-light text-[15px] mt-3">
+            Tissus épais, tailles réelles, prix affichés en dinars, échange gratuit sous 7 jours.
+          </p>
+          <div className="grid grid-cols-3 gap-2.5 mt-6 text-center">
+            {[["58", "Wilayas livrées"], ["12 k+", "Clients satisfaits"], ["4,8/5", "Note moyenne"]].map(([a, b]) => (
+              <div key={b} className="card-soft p-4"><p className="font-display font-bold text-xl">{a}</p><p className="text-[11px] font-light text-gray-500 mt-1">{b}</p></div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-3 mt-7">
+            <Link href="/shop" className="btn-fluid">Voir les best-sellers</Link>
+            <Link href="/contact" className="btn-ghost">Nous contacter</Link>
+          </div>
+        </div>
+      </div>
+      <div className="card-soft grid md:grid-cols-3 gap-6 p-7 mt-10">
+        {[
+          ["Qualité contrôlée", "Chaque pièce est vérifiée à Alger avant expédition : coutures, taille, tissu."],
+          ["Tailles honnêtes", "Guide réel M → XXL basé sur des mesures algériennes, pas des tailles asiatiques."],
+          ["Zéro risque", "Paiement en espèces à la réception, échange gratuit sous 7 jours."],
+        ].map(([t, s]) => (
+          <div key={t}><p className="font-title font-semibold">{t}</p><p className="text-sm font-light text-gray-500 mt-1.5 leading-relaxed">{s}</p></div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Poppins", system-ui, -apple-system, sans-serif;
+  --color-ink: #14142b;
+  --color-muted: #6b6f8a;
+  --color-lav: #f5f4ff;
+  --color-grad-a: #8b9bff;
+  --color-grad-b: #6fc3f0;
+  --color-accent: #6c4dff;
+}
+
+:root {
+  --background: #f6f5ff;
+  --foreground: #14142b;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at 10% -5%, #e3ecff 0%, transparent 60%),
+    radial-gradient(900px 500px at 95% 10%, #efe6ff 0%, transparent 60%),
+    #fbfbff;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== Système typographique Poppins ===== */
+.font-display {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+.font-title {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.eyebrow {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #6c4dff;
+}
+.body-light {
+  font-weight: 300;
+  color: #6b6f8a;
+  line-height: 1.7;
+}
+.body-regular {
+  font-weight: 400;
+  line-height: 1.7;
+}
+.label-bold {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.price-bold {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ===== Boutons ===== */
+.btn-fluid {
+  background: linear-gradient(90deg, #8b9bff 0%, #6fc3f0 100%);
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  padding: 13px 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(108, 77, 255, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  text-transform: uppercase;
+}
+.btn-fluid:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px rgba(108, 77, 255, 0.34);
+}
+.btn-fluid:active {
+  transform: translateY(0);
+}
+
+.btn-dark {
+  background: #14142b;
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  padding: 13px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.btn-dark:hover { background: #000; transform: translateY(-1px); }
+
+.btn-ghost {
+  border: 1.5px solid #14142b;
+  color: #14142b;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  padding: 12px 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.btn-ghost:hover { background: #14142b; color: #fff; }
+
+/* ===== Cartes ===== */
+.card-soft {
+  background: white;
+  border: 1px solid #eceafa;
+  box-shadow: 0 12px 34px rgba(80, 80, 160, 0.08);
+  border-radius: 18px;
+}
+
+.input-soft {
+  width: 100%;
+  height: 48px;
+  border: 1.5px solid #e5e3f5;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 400;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-soft:focus {
+  border-color: #6c4dff;
+  box-shadow: 0 0 0 3px rgba(108, 77, 255, 0.12);
+}
+.input-soft::placeholder { color: #a5a8c0; font-weight: 300; }
+
+.section-title {
+  font-weight: 700;
+  font-size: clamp(24px, 3.4vw, 36px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.section-sub {
+  font-weight: 300;
+  font-size: 14px;
+  color: #6b6f8a;
+  margin-top: 6px;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.hero-grid-bg {
+  background-image:
+    linear-gradient(#e9e7ff 1px, transparent 1px),
+    linear-gradient(90deg, #e9e7ff 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 60%, transparent 100%);
+  opacity: 0.35;
+}
+
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
