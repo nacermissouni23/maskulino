@@ -27,6 +27,7 @@
     "eslint-config-next": "16.3.6",
     "pg": "^8.23.0",
     "tailwindcss": "^4",
+    "tweetsodium": "^0.0.4",
     "typescript": "^5"
   }
 }

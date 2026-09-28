@@ -7,17 +7,18 @@ jobs:
   dump:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Postgres client
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-      - name: Logical dump (schema + data, no Storage bytes)
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Logical backup over REST (all tables as JSON)
         env:
-          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          pg_dump -h "${{ secrets.SUPABASE_DB_HOST }}" -p 5432 -U postgres -d postgres \
-            --no-owner --no-privileges -F c -f maskulino-$(date +%F).dump
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/backup-rest.mjs
       - name: Keep 90 days as artifact
         uses: actions/upload-artifact@v4
         with:
           name: maskulino-db-${{ github.run_number }}
-          path: maskulino-*.dump
+          path: maskulino-backup-*.json
           retention-days: 90
