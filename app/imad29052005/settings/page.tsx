@@ -9,8 +9,7 @@ import {
   listCategories, addCategory, renameCategory, deleteCategory,
 } from "@/lib/actions/catalog";
 import {
-  savePushSubscription, sendTestPush, pushTargets,
-  setTelegramUsername, sendTestTelegram,
+  pushTargets, setTelegramUsername, sendTestTelegram,
 } from "@/lib/actions/notify";
 import { Plus, Trash2, Pencil, Bell } from "lucide-react";
 
@@ -37,8 +36,6 @@ export default function AdminSettings() {
   const [activeCarrier, setActiveCarrier] = useState("yalidine");
   const [q, setQ] = useState("");
   const [onlyUncovered, setOnlyUncovered] = useState(false);
-  const [pushOn, setPushOn] = useState(false);
-  const [devices, setDevices] = useState(0);
   const [tgUser, setTgUser] = useState("");
   const [tgActive, setTgActive] = useState(false);
   const [notifMsg, setNotifMsg] = useState("");
@@ -57,10 +54,8 @@ export default function AdminSettings() {
     setCarriers(cr);
     setPrices(pr);
     setWilayas(wz);
-    setDevices(tg.devices);
     setTgUser(tg.telegram);
     setTgActive(tg.telegramActive);
-    if ("Notification" in window) setPushOn(Notification.permission === "granted");
   }
   useEffect(() => { loadAll(); }, []);
 
@@ -130,33 +125,6 @@ export default function AdminSettings() {
   }
 
   const covered = carrier ? Object.values(prices[carrier.id] ?? {}).filter((p) => p.couvert).length : 0;
-
-  async function enablePush() {
-    setNotifMsg("");
-    if (!("Notification" in window)) { setNotifMsg("Notifications non supportées par ce navigateur."); return; }
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") { setNotifMsg("Permission refusée — réactivez-la dans le navigateur."); return; }
-    try {
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-      });
-      const r = await savePushSubscription(sub.toJSON(), navigator.userAgent.includes("Mobi") ? "Téléphone" : "PC");
-      if (r.ok) {
-        setPushOn(true);
-        setDevices(await pushTargets().then((t) => t.devices).catch(() => devices));
-        new Notification("Notifications activées ✅", { body: "Tu recevras chaque commande ici." });
-      }
-    } catch {
-      setNotifMsg("Échec de l'activation — réessayez.");
-    }
-  }
-
-  async function testPush() {
-    const r = await sendTestPush();
-    setNotifMsg(r.ok ? (r.sent > 0 ? "Notification test envoyée ✅" : "Aucun appareil enregistré.") : "Échec de l'envoi.");
-  }
 
   async function connectTelegram() {
     if (!tgUser.trim()) return;
@@ -316,24 +284,14 @@ export default function AdminSettings() {
 
       <div className="card-soft p-5 mt-3">
         <p className="font-title font-semibold text-sm flex items-center gap-2"><Bell size={15} /> Alertes de commandes</p>
-        <p className="text-[11px] font-light text-stone-400 mt-0.5">Notification + son à chaque commande — sur cet appareil et sur Telegram.</p>
-        <div className="grid sm:grid-cols-2 gap-2 mt-3">
-          <div className="bg-[#f5f3ee] border border-[#e8e3d8] rounded-xl p-3.5">
-            <p className="text-xs font-semibold">Cet appareil {devices > 0 && <span className="font-light text-stone-500">({devices} enregistré{devices > 1 ? "s" : ""})</span>}</p>
-            <div className="flex gap-1.5 mt-2.5">
-              {!pushOn
-                ? <button onClick={enablePush} className="btn-dark !py-2.5 flex-1">Activer</button>
-                : <button onClick={testPush} className="btn-dark !py-2.5 flex-1">Envoyer un test</button>}
-            </div>
+        <p className="text-[11px] font-light text-stone-400 mt-0.5">Notification + son à chaque commande, directement sur Telegram.</p>
+        <div className="bg-[#f5f3ee] border border-[#e8e3d8] rounded-xl p-3.5 mt-3">
+          <p className="text-xs font-semibold">Telegram {tgActive && <span className="font-bold text-[#20744d]">· connecté</span>}</p>
+          <div className="flex gap-1.5 mt-2.5">
+            <input value={tgUser} onChange={(e) => setTgUser(e.target.value)} placeholder="@username" className="input-soft !h-11 flex-1 min-w-0" />
+            <button onClick={connectTelegram} className="btn-dark !py-2 whitespace-nowrap">Connecter</button>
           </div>
-          <div className="bg-[#f5f3ee] border border-[#e8e3d8] rounded-xl p-3.5">
-            <p className="text-xs font-semibold">Telegram {tgActive && <span className="font-bold text-[#20744d]">· connecté</span>}</p>
-            <div className="flex gap-1.5 mt-2.5">
-              <input value={tgUser} onChange={(e) => setTgUser(e.target.value)} placeholder="@username" className="input-soft !h-11 flex-1 min-w-0" />
-              <button onClick={connectTelegram} className="btn-dark !py-2 whitespace-nowrap">Connecter</button>
-            </div>
-            <button onClick={testTelegram} className="w-full mt-1.5 h-11 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold">Envoyer un test</button>
-          </div>
+          <button onClick={testTelegram} className="w-full mt-1.5 h-11 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold">Envoyer un test</button>
         </div>
         {notifMsg && <p className="text-xs font-medium text-stone-600 bg-white border border-[#e8e3d8] rounded-xl p-2.5 mt-2.5">{notifMsg}</p>}
       </div>

@@ -6,7 +6,6 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, ChartLine, Settings, Store, Bell, X,
 } from "lucide-react";
 import { latestOrderInfo, listOrders } from "@/lib/actions/orders";
-import { savePushSubscription } from "@/lib/actions/notify";
 
 const NAV = [
   { href: "/imad29052005", label: "Tableau de bord", icon: LayoutDashboard },
@@ -90,15 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!("Notification" in window)) return;
     const perm = await Notification.requestPermission();
     if (perm !== "granted") return;
-    try {
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-      });
-      await savePushSubscription(sub.toJSON(), navigator.userAgent.includes("Mobi") ? "Téléphone" : "PC");
-      new Notification("Notifications activées ✅", { body: "Tu recevras chaque commande ici." });
-    } catch { /* push unavailable, in-app ding still works */ }
+    new Notification("Notifications activées ✅", { body: "Tu recevras chaque commande ici." });
     ding();
   }
 

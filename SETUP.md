@@ -11,11 +11,7 @@
    - `SUPABASE_SERVICE_ROLE_KEY` (server only — never in client code)
    - DB password + host (only for the backup workflow secrets)
 
-## 2. VAPID (Web Push, free forever)
-`npx web-push generate-vapid-keys` → `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
-`VAPID_SUBJECT=mailto:contact@maskulino.dz`.
-
-## 3. Telegram bot (free)
+## 2. Telegram bot (free)
 1. BotFather → `/newbot` → name it (e.g. `MaskulinoOrdersBot`) → copy token → `TELEGRAM_BOT_TOKEN`.
 2. `NEXT_PUBLIC_TELEGRAM_BOT=<BotUsernameWithoutAt>`.
 3. After deploy, register the webhook **once**:
