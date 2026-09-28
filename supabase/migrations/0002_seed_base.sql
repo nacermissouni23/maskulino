@@ -227,7 +227,7 @@ insert into categories (name, sort) values ('Chaussures',8) on conflict (name) d
 insert into categories (name, sort) values ('Accessoires',9) on conflict (name) do nothing;
 
 insert into shop_settings (id, name, phone, whatsapp, domain, facebook, instagram, tiktok, address, hours) values
-(1,'Maskulino','0770 00 00 00','https://wa.me/213770000000','maskulino.dz','','','','Didouche Mourad, Alger','Sam – Jeu : 10h – 20h | Ven : 15h – 20h')
+(1,'Maskulino','0781 51 04 18','https://wa.me/213781510418','maskulino.dz','','','','Didouche Mourad, Alger','Sam – Jeu : 10h – 20h | Ven : 15h – 20h')
 on conflict (id) do nothing;
 
 insert into promotions (code, name, type, value, scope, active) values

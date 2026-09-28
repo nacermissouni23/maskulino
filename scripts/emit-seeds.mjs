@@ -63,7 +63,7 @@ s2 += `insert into carrier_prices (carrier_id, wilaya_code, home, stopdesk, cove
   `\non conflict (carrier_id, wilaya_code) do update set home = excluded.home, stopdesk = excluded.stopdesk, covered = excluded.covered;\n\n`;
 s2 += CATEGORIES.map((c,i) => `insert into categories (name, sort) values ('${esc(c)}',${i+1}) on conflict (name) do nothing;`).join("\n") + "\n\n";
 s2 += `insert into shop_settings (id, name, phone, whatsapp, domain, facebook, instagram, tiktok, address, hours) values
-(1,'Maskulino','0770 00 00 00','https://wa.me/213770000000','maskulino.dz','','','','Didouche Mourad, Alger','Sam – Jeu : 10h – 20h | Ven : 15h – 20h')
+(1,'Maskulino','0781 51 04 18','https://wa.me/213781510418','maskulino.dz','','','','Didouche Mourad, Alger','Sam – Jeu : 10h – 20h | Ven : 15h – 20h')
 on conflict (id) do nothing;\n\n`;
 s2 += `insert into promotions (code, name, type, value, scope, active) values
 ('DZ10','Promo DZ10','pourcentage',10,'tous',true)

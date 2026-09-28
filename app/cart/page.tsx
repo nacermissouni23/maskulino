@@ -54,7 +54,7 @@ export default function CartPage() {
               <p>Paiement en espèces à la réception</p>
             </div>
             <Link href="/checkout" className="btn-fluid w-full mt-5">Commander <ArrowRight size={15} /></Link>
-            <a href="https://wa.me/213770000000" className="block text-center text-xs font-semibold mt-3 text-[#20744d] hover:underline underline-offset-4">ou commander via WhatsApp →</a>
+            <a href="https://wa.me/213781510418" className="block text-center text-xs font-semibold mt-3 text-[#20744d] hover:underline underline-offset-4">ou commander via WhatsApp →</a>
           </div>
         </div>
       )}

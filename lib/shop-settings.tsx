@@ -15,8 +15,8 @@ export type ShopSettings = {
 
 export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   name: "Maskulino",
-  phone: "0770 00 00 00",
-  whatsapp: "https://wa.me/213770000000",
+  phone: "0781 51 04 18",
+  whatsapp: "https://wa.me/213781510418",
   domain: "maskulino.dz",
   facebook: "",
   instagram: "",
