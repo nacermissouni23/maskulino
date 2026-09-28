@@ -15,7 +15,7 @@ if (!PW) {
 
 const MIGRATIONS = {
   dev: ["0001_schema.sql", "0002_seed_base.sql", "0003_seed_catalog.sql", "0006_category_slug.sql", "0007_public_tracking.sql", "0005_storage.sql", "0004_seed_demo.sql"],
-  prod: ["0001_schema.sql", "0002_seed_base.sql", "0003_seed_catalog.sql", "0006_category_slug.sql", "0007_public_tracking.sql", "0005_storage.sql"],
+  prod: ["0001_schema.sql", "0002_seed_base.sql", "0003_seed_catalog.sql", "0006_category_slug.sql", "0007_public_tracking.sql", "0005_storage.sql", "0008_order_webhook.sql"],
 };
 
 const cmd = process.argv[2];
@@ -40,6 +40,18 @@ if (cmd === "migrate") {
       await pool.end();
       process.exit(1);
     }
+  }
+} else if (cmd === "run") {
+  // Single migration file, e.g.: node scripts/db.mjs run prod 0008_order_webhook.sql
+  const f = process.argv[4];
+  const sql = readFileSync(`supabase/migrations/${f}`, "utf8");
+  try {
+    await pool.query(sql);
+    console.log(`${f} OK`);
+  } catch (e) {
+    console.error(`${f} FAIL: ${e.message}`);
+    await pool.end();
+    process.exit(1);
   }
 } else if (cmd === "query") {
   const res = await pool.query(process.argv.slice(4).join(" "));
