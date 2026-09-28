@@ -2,10 +2,21 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal, Search } from "lucide-react";
-import { PRODUCTS, CATEGORIES } from "@/lib/data";
 import ProductCard from "@/components/ProductCard";
+import type { ShopProduct } from "@/lib/storefront";
 
-export default function ShopPage() {
+function toCard(p: ShopProduct) {
+  return {
+    slug: p.slug, name: p.name, category: p.category, price: p.price,
+    oldPrice: p.oldPrice, rating: 5, reviews: 0, sizes: p.sizes, colors: p.colors,
+    image: p.image, gallery: p.gallery.map((g) => g.src), desc: p.desc, stock: p.totalStock,
+  };
+}
+
+export default function ShopPage({ initial, categories }: {
+  initial: ShopProduct[];
+  categories: { slug: string; name: string }[];
+}) {
   const params = useSearchParams();
   const initialCat = params.get("cat") ?? "all";
   const [cat, setCat] = useState(initialCat);
@@ -13,14 +24,14 @@ export default function ShopPage() {
   const [q, setQ] = useState("");
 
   const list = useMemo(() => {
-    let l = [...PRODUCTS];
+    let l = [...initial];
     if (cat !== "all") l = l.filter((p) => p.category === cat);
     if (q) l = l.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()));
     if (sort === "cheap") l.sort((a, b) => a.price - b.price);
     if (sort === "exp") l.sort((a, b) => b.price - a.price);
-    if (sort === "rate") l.sort((a, b) => b.rating - a.rating);
+    if (sort === "rate") l.sort((a, b) => b.totalStock - a.totalStock);
     return l;
-  }, [cat, sort, q]);
+  }, [initial, cat, sort, q]);
 
   return (
     <div className="container-x py-8 md:py-12">
@@ -43,7 +54,7 @@ export default function ShopPage() {
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar mt-4 pb-1">
         <button onClick={() => setCat("all")} className={`px-5 h-10 text-xs font-semibold rounded-full whitespace-nowrap border-[1.5px] transition ${cat === "all" ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8]"}`}>Tout</button>
-        {CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <button key={c.slug} onClick={() => setCat(c.slug)} className={`px-5 h-10 text-xs font-semibold rounded-full whitespace-nowrap border-[1.5px] transition ${cat === c.slug ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8]"}`}>{c.name}</button>
         ))}
       </div>
@@ -51,7 +62,7 @@ export default function ShopPage() {
       <p className="text-xs font-light text-stone-500 mt-4 flex items-center gap-1.5"><SlidersHorizontal size={13}/> {list.length} article{list.length > 1 ? "s" : ""} — photos optimisées pour la 3G</p>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mt-4 md:mt-5">
-        {list.map((p) => <ProductCard key={p.slug} p={p} />)}
+        {list.map((p) => <ProductCard key={p.slug} p={toCard(p)} />)}
       </div>
       {list.length === 0 && (
         <div className="card-soft text-center py-16 mt-4">

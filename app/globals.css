@@ -189,6 +189,11 @@ body {
 }
 .input-soft::placeholder { color: var(--color-faint); font-weight: 300; }
 
+/* Téléphone : champs en 16px pour éviter le zoom auto d'iOS au focus */
+@media (max-width: 639px) {
+  .input-soft { font-size: 16px; }
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 

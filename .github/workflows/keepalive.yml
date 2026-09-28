@@ -1,0 +1,14 @@
+name: supabase-keepalive
+on:
+  schedule:
+    - cron: "0 6 */3 * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Real DB read (resets the 7-day pause timer)
+        run: |
+          curl -fsS "${{ secrets.SUPABASE_URL }}/rest/v1/shop_settings?select=id&id=eq.1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" | head -c 200

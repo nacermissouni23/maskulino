@@ -1,14 +1,32 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Minus, Plus, ShieldCheck, Truck, RefreshCcw, Headset } from "lucide-react";
-import { WILAYAS, formatDA, type Product } from "@/lib/data";
+import { formatDA } from "@/lib/data";
+import { COMMUNES } from "@/lib/communes";
+import { useShipping } from "@/lib/shipping";
+import { createOrder } from "@/lib/actions/orders";
+import type { ShopProduct, ShopContext } from "@/lib/storefront";
 
-export function TrustBar() {
+export function TrustBar({ wilayaCount }: { wilayaCount?: number }) {
+  const { carriers, prices } = useShipping();
+  const localCount = useMemo(() => {
+    const covered = new Set<number>();
+    for (const c of carriers) {
+      if (!c.actif) continue;
+      const table = prices[c.id];
+      if (!table) continue;
+      for (const [code, p] of Object.entries(table)) {
+        if (p.couvert) covered.add(Number(code));
+      }
+    }
+    return covered.size;
+  }, [carriers, prices]);
+  const count = wilayaCount ?? localCount;
   const items = [
-    { icon: ShieldCheck, t: "Paiement à la livraison", s: "Payez à la réception" },
-    { icon: Truck, t: "58 wilayas", s: "2 à 5 jours" },
-    { icon: RefreshCcw, t: "Échange sous 7 jours", s: "Taille échangée gratuitement" },
-    { icon: Headset, t: "Confirmation en 4 h", s: "Par téléphone / WhatsApp" },
+    { icon: ShieldCheck, t: "Paiement à la livraison" },
+    { icon: Truck, t: `${count} wilayas` },
+    { icon: RefreshCcw, t: "Échange sous 7 jours" },
+    { icon: Headset, t: "Confirmation en 4 h" },
   ];
   return (
     <div className="container-x">
@@ -18,10 +36,7 @@ export function TrustBar() {
             <span className="w-11 h-11 rounded-xl bg-[#efe9d8] text-[#7a5a28] flex items-center justify-center shrink-0">
               <it.icon size={19} />
             </span>
-            <span>
-              <span className="block text-xs md:text-sm font-semibold">{it.t}</span>
-              <span className="block text-[11px] font-light text-stone-500 mt-0.5">{it.s}</span>
-            </span>
+            <span className="block text-xs md:text-sm font-semibold">{it.t}</span>
           </div>
         ))}
       </div>
@@ -39,23 +54,124 @@ export function QtyStepper({ qty, setQty }: { qty: number; setQty: (n: number) =
   );
 }
 
-export function QuickOrderForm({ product }: { product: Product }) {
-  const [form, setForm] = useState({ name: "", phone: "", wilaya: 16, commune: "", address: "", size: product.sizes[1] ?? product.sizes[0], qty: 1, ship: "home" as "home" | "stopdesk" });
-  const [done, setDone] = useState(false);
+export function QuickOrderForm({ product, shipping, onColorChange }: {
+  product: ShopProduct;
+  shipping: ShopContext;
+  onColorChange?: (color: string) => void;
+}) {
+  const [articles, setArticles] = useState<{ size: string; color: string }[]>([{ size: "", color: "" }]);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    wilaya: 16,
+    commune: "",
+    address: "",
+    carrierId: "",
+    ship: "home" as "home" | "stopdesk",
+  });
+  const [done, setDone] = useState<{ number: string; total: number } | null>(null);
   const [err, setErr] = useState("");
-  const wilaya = useMemo(() => WILAYAS.find((w) => w.code === Number(form.wilaya))!, [form.wilaya]);
-  const shipCost = form.ship === "home" ? wilaya.home : wilaya.stopdesk;
-  const total = product.price * form.qty + shipCost;
+  const [busy, setBusy] = useState(false);
+  const idemRef = useRef<string>("");
 
-  const submit = (e: React.FormEvent) => {
+  const stockOf = (s: string, c: string) => product.stock[s]?.[c] ?? 0;
+  const activeCarriers = shipping.carriers;
+  const prices = shipping.prices;
+  const WILAYAS = shipping.wilayas.length ? shipping.wilayas : [{ code: 16, name: "16 - Alger" }];
+
+  const carrierId = form.carrierId || activeCarriers[0]?.id || "";
+  const wilayaBase = useMemo(() => WILAYAS.find((w) => w.code === Number(form.wilaya))!, [WILAYAS, form.wilaya]);
+  const table = prices[carrierId]?.[Number(form.wilaya)];
+  const homePrice = table?.home ?? 600;
+  const stopdeskPrice = table?.stopdesk ?? null;
+  const stopdeskAvailable = stopdeskPrice !== null;
+  const ship = !stopdeskAvailable ? "home" : form.ship;
+  const shipCost = ship === "home" ? homePrice : (stopdeskPrice ?? homePrice);
+  const total = product.price * articles.length + shipCost;
+  const carrierName = activeCarriers.find((c) => c.id === carrierId)?.nom ?? "";
+  void wilayaBase;
+
+  function pickSize(ai: number, s: string) {
+    setArticles((arts) => arts.map((a, j) => (j === ai ? { ...a, size: s } : a)));
+  }
+
+  function pickColor(ai: number, c: string) {
+    setArticles((arts) => arts.map((a, j) => (j === ai ? { ...a, color: c } : a)));
+    onColorChange?.(c);
+  }
+
+  function sizeOut(s: string) {
+    return product.colors.every((c) => stockOf(s, c) <= 0);
+  }
+  function colorOut(c: string, size: string) {
+    if (size) return stockOf(size, c) <= 0;
+    return product.sizes.every((s) => stockOf(s, c) <= 0);
+  }
+
+  function addArticle() {
+    if (articles.length >= 5) return;
+    setArticles((arts) => [...arts, { size: "", color: "" }]);
+  }
+
+  function removeArticle() {
+    if (articles.length <= 1) return;
+    setArticles((arts) => arts.slice(0, -1));
+  }
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     const phoneOk = /^(05|06|07)\d{8}$/.test(form.phone.replace(/[\s-]/g, ""));
+    for (let k = 0; k < articles.length; k++) {
+      const label = articles.length > 1 ? `Article ${k + 1} : ` : "";
+      if (!articles[k].size) return setErr(`${label}Choisissez votre taille.`);
+      if (!articles[k].color) return setErr(`${label}Choisissez votre couleur.`);
+    }
     if (form.name.trim().length < 3) return setErr("Veuillez saisir votre nom complet.");
     if (!phoneOk) return setErr("Numéro invalide — exemple : 0550123456 (05 / 06 / 07 + 10 chiffres).");
-    if (!form.commune.trim()) return setErr("Veuillez saisir votre commune.");
+    if (!form.commune) return setErr("Sélectionnez votre commune dans la liste.");
+    if (!carrierId) return setErr("Aucun transporteur disponible pour le moment.");
+    // Stock rule: same combo count across articles must not exceed live stock.
+    const counts: Record<string, number> = {};
+    for (const a of articles) {
+      const key = `${a.size}|||${a.color}`;
+      counts[key] = (counts[key] ?? 0) + 1;
+      const left = stockOf(a.size, a.color);
+      if (counts[key] > left) {
+        return setErr(left <= 0
+          ? `Épuisé : ${a.size} · ${a.color} — choisissez une autre couleur ou taille.`
+          : `Plus que ${left} disponible${left > 1 ? "s" : ""} pour ${a.size} · ${a.color}.`);
+      }
+    }
+    const items = articles.map((a) => ({
+      variant_id: product.variantId[a.size]?.[a.color] ?? "",
+      qty: 1,
+    }));
+    if (items.some((i) => !i.variant_id)) return setErr("Variante indisponible — choisissez une autre couleur ou taille.");
     setErr("");
-    setDone(true);
-    (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq?.("track", "Purchase", { value: total, currency: "DZD" });
+    setBusy(true);
+    if (!idemRef.current && typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      idemRef.current = crypto.randomUUID();
+    }
+    const res = await createOrder({
+      name: form.name, phone: form.phone, wilaya: Number(form.wilaya),
+      commune: form.commune, address: form.address, landmark: "",
+      delivery: ship === "home" ? "domicile" : "stopdesk",
+      carrier: carrierId, items, source: "direct", campaign: "", promo: "",
+      idempotency: idemRef.current || `${Date.now()}`,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      if (res.code.startsWith("RUPTURE")) {
+        const [, s, c] = res.code.split(":");
+        return setErr(`Épuisé : ${s} · ${c} — choisissez une autre couleur ou taille.`);
+      }
+      if (res.code === "NON_COUVERT") return setErr("Livraison indisponible vers cette wilaya avec ce transporteur.");
+      if (res.code === "RATE_LIMITED") return setErr("Trop de tentatives — réessayez dans une heure.");
+      return setErr("Commande impossible pour le moment — réessayez.");
+    }
+    setDone({ number: res.number, total: res.total });
+    (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq?.("track", "Purchase", { value: res.total, currency: "DZD" });
   };
 
   if (done)
@@ -63,9 +179,13 @@ export function QuickOrderForm({ product }: { product: Product }) {
       <div className="bg-[#eef5ef] border border-[#cfe3d3] rounded-2xl p-6 text-center">
         <p className="w-12 h-12 rounded-full bg-[#20744d] text-white font-bold text-xl flex items-center justify-center mx-auto">✓</p>
         <p className="font-semibold text-lg mt-3">Merci {form.name} ! Commande bien reçue.</p>
-        <p className="text-sm font-light text-stone-600 mt-2 leading-relaxed">Nous allons vous appeler sur le <span className="font-semibold text-stone-900">{form.phone}</span> en moins de 4 h pour confirmer. Total à payer en espèces : <span className="font-bold text-stone-900">{formatDA(total)}</span></p>
-        <p className="text-xs font-light text-stone-500 mt-2">N° de suivi : MSK-{Math.floor(8000 + Math.random() * 999)} — Suivez-le sur la page Suivi.</p>
-        <button onClick={() => setDone(false)} className="text-xs font-medium underline underline-offset-4 mt-3">Passer une nouvelle commande</button>
+        <p className="text-sm font-light text-stone-600 mt-2 leading-relaxed">
+          {product.name} — {articles.map((a) => `${a.size} · ${a.color}`).join(" | ")} · {carrierName} ({ship === "home" ? "À domicile" : "Stop Desk"}).
+          Nous allons vous appeler sur le <span className="font-semibold text-stone-900">{form.phone}</span> en moins de 4 h pour confirmer.
+          Total à payer en espèces : <span className="font-bold text-stone-900">{formatDA(done.total)}</span>
+        </p>
+        <p className="text-xs font-light text-stone-500 mt-2">N° de suivi : {done.number} — Suivez-le sur la page Suivi.</p>
+        <button onClick={() => { setDone(null); idemRef.current = ""; }} className="text-xs font-medium underline underline-offset-4 mt-3">Passer une nouvelle commande</button>
       </div>
     );
 
@@ -75,41 +195,82 @@ export function QuickOrderForm({ product }: { product: Product }) {
         <p className="font-title font-semibold text-lg">Commander — paiement à la livraison</p>
         <p className="text-xs font-light text-stone-500 mt-1">Remplissez le formulaire, on vous confirme par téléphone ou WhatsApp. Aucun prépaiement.</p>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <p className="text-xs font-semibold mb-1.5">Taille</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {product.sizes.map((s) => (
-              <button type="button" key={s} onClick={() => setForm({ ...form, size: s })} className={`min-w-11 px-3 h-10 text-xs font-semibold border-[1.5px] rounded-[10px] transition ${form.size === s ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8] hover:border-stone-400"}`}>{s}</button>
-            ))}
+      <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
+        {articles.map((a, ai) => (
+          <div key={ai} className="min-[480px]:col-span-2">
+            {articles.length > 1 && <p className="text-xs font-semibold mb-1.5">Article {ai + 1}</p>}
+            <p className="text-xs font-semibold mb-1.5">1 · Taille *</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {product.sizes.map((s) => (
+                <button type="button" key={s} disabled={sizeOut(s)} onClick={() => pickSize(ai, s)} className={`min-w-11 px-3 h-10 text-xs font-semibold border-[1.5px] rounded-[10px] transition disabled:opacity-30 disabled:cursor-not-allowed ${a.size === s ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8] hover:border-stone-400"}`}>{s}</button>
+              ))}
+            </div>
+            <p className="text-xs font-semibold mb-1.5 mt-3">2 · Couleur *</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {product.colors.map((c) => (
+                <button type="button" key={c} disabled={colorOut(c, a.size)} onClick={() => pickColor(ai, c)} className={`min-w-11 px-3 h-10 text-xs font-semibold border-[1.5px] rounded-[10px] transition disabled:opacity-30 disabled:cursor-not-allowed ${a.color === c ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8] hover:border-stone-400"}`}>{c}</button>
+              ))}
+            </div>
           </div>
+        ))}
+        <div className="min-[480px]:col-span-2 flex items-center gap-3">
+          <div className="flex items-center border-[1.5px] border-[#e8e3d8] rounded-[10px] h-11 bg-white">
+            <button type="button" onClick={removeArticle} disabled={articles.length <= 1} className="px-3.5 h-full hover:text-[#a06a2c] disabled:opacity-30" aria-label="Retirer un article"><Minus size={16} /></button>
+            <span className="w-20 text-center text-xs font-semibold whitespace-nowrap">{articles.length} article{articles.length > 1 ? "s" : ""}</span>
+            <button type="button" onClick={addArticle} disabled={articles.length >= 5} className="px-3.5 h-full hover:text-[#a06a2c] disabled:opacity-30" aria-label="Ajouter un article"><Plus size={16} /></button>
+          </div>
+          <p className="text-[11px] font-light text-stone-500">Ajoutez un autre article avec une taille / couleur différente.</p>
         </div>
-        <label className="text-xs font-semibold">Nom complet *
+        <p className="min-[480px]:col-span-2 text-xs font-semibold">3 · Vos informations</p>
+        <label className="text-xs font-semibold min-w-0">Nom complet *
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex : Yacine Benali" className="input-soft mt-1.5" />
         </label>
-        <label className="text-xs font-semibold">Téléphone *
+        <label className="text-xs font-semibold min-w-0">Téléphone *
           <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} inputMode="tel" placeholder="0550 00 00 00" className="input-soft mt-1.5" />
         </label>
-        <label className="text-xs font-semibold">Wilaya *
-          <select value={form.wilaya} onChange={(e) => setForm({ ...form, wilaya: Number(e.target.value) })} className="input-soft mt-1.5">
-            {WILAYAS.map((w) => <option key={w.code} value={w.code}>{w.name} — {formatDA(w.home)}</option>)}
+        <label className="text-xs font-semibold min-w-0">Wilaya *
+          <select value={form.wilaya} onChange={(e) => setForm({ ...form, wilaya: Number(e.target.value), commune: "" })} className="input-soft mt-1.5">
+            {WILAYAS.map((w) => {
+              const p = prices[carrierId]?.[w.code];
+              return <option key={w.code} value={w.code}>{w.code} - {w.name} — {formatDA(p?.home ?? homePrice)}</option>;
+            })}
           </select>
         </label>
-        <label className="text-xs font-semibold">Commune *
-          <input value={form.commune} onChange={(e) => setForm({ ...form, commune: e.target.value })} placeholder="Ex : Bab Ezzouar" className="input-soft mt-1.5" />
+        <label className="text-xs font-semibold min-w-0">Commune *
+          <select value={form.commune} onChange={(e) => setForm({ ...form, commune: e.target.value })} className="input-soft mt-1.5">
+            <option value="">Sélectionnez…</option>
+            {(COMMUNES[Number(form.wilaya)] ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
         </label>
-        <label className="text-xs font-semibold col-span-2">Adresse / point de repère
+        <label className="text-xs font-semibold min-[480px]:col-span-2">Adresse / point de repère
           <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rue, arrêt de bus, mosquée…" className="input-soft mt-1.5" />
         </label>
-        <div className="col-span-2 grid grid-cols-2 gap-2">
-          {(["home", "stopdesk"] as const).map((k) => (
-            <button type="button" key={k} onClick={() => setForm({ ...form, ship: k })} className={`py-3 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${form.ship === k ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
-              {k === "home" ? `À domicile — ${formatDA(wilaya.home)}` : `Au bureau — ${formatDA(wilaya.stopdesk)}`}
-            </button>
-          ))}
+        <div className="min-[480px]:col-span-2">
+          <p className="text-xs font-semibold mb-1.5">4 · Livraison *</p>
+          {activeCarriers.length === 0 ? (
+            <p className="text-xs font-light text-stone-500 bg-[#f5f3ee] border border-[#e8e3d8] rounded-[10px] p-3">Aucun transporteur disponible pour le moment.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {activeCarriers.map((c) => (
+                <button type="button" key={c.id} onClick={() => setForm({ ...form, carrierId: c.id })} className={`py-3 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${carrierId === c.id ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
+                  {c.nom}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="col-span-2 flex items-center justify-between gap-3">
-          <QtyStepper qty={form.qty} setQty={(qty) => setForm({ ...form, qty })} />
+        <div className="min-[480px]:col-span-2 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setForm({ ...form, ship: "home" })} className={`py-3 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${ship === "home" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
+            À domicile — {formatDA(homePrice)}
+          </button>
+          <button type="button" disabled={!stopdeskAvailable} onClick={() => setForm({ ...form, ship: "stopdesk" })} className={`py-3 rounded-[10px] border-[1.5px] text-xs font-semibold transition disabled:opacity-40 ${ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
+            {stopdeskAvailable ? `Stop Desk — ${formatDA(stopdeskPrice!)}` : "Stop Desk — indisponible"}
+          </button>
+        </div>
+        <div className="min-[480px]:col-span-2 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-light text-stone-500 text-xs">{articles.length} article{articles.length > 1 ? "s" : ""} × {formatDA(product.price)}</p>
+          </div>
           <div className="text-right">
             <p className="font-light text-stone-500 text-xs">Produit + livraison</p>
             <p className="font-bold text-xl">{formatDA(total)}</p>
@@ -117,8 +278,7 @@ export function QuickOrderForm({ product }: { product: Product }) {
         </div>
       </div>
       {err && <p className="text-xs font-medium text-[#c0452f] bg-[#fdf0ec] border border-[#f3d4c8] p-2.5 rounded-[10px]">{err}</p>}
-      <button className="btn-fluid w-full !py-4 !text-[13px]">Confirmer la commande</button>
-      <p className="text-[11px] font-light text-center text-stone-500">Ne payez qu'à la réception • Échange sous 7 jours • Confirmation en moins de 4 h</p>
+      <button disabled={busy} className="btn-fluid w-full !py-4 !text-[13px] disabled:opacity-50">{busy ? "Envoi…" : "Confirmer la commande"}</button>
     </form>
   );
 }

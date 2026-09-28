@@ -156,33 +156,82 @@ export const PRODUCTS: Product[] = [
 
 export type Wilaya = { code: number; name: string; home: number; stopdesk: number };
 
+// 69 wilayas — loi n° 26-06 (JO n° 25, 5 avril 2026) + décret n° 26-206 (JO n° 40).
+// 01–58 : découpage 2019. 59–69 : nouvelles wilayas (wilaya mère entre parenthèses).
+// Prix par défaut = grille Yalidine indicative 2025-2026 (domicile / stop-desk, colis ≤ 5 kg).
+// Les 59–69 reprennent le tarif de leur wilaya mère ; la livraison y passe par la
+// wilaya mère jusqu'au 31/12/2026 (transition).
 export const WILAYAS: Wilaya[] = [
-  { code: 16, name: "16 - Alger", home: 400, stopdesk: 250 },
-  { code: 31, name: "31 - Oran", home: 500, stopdesk: 300 },
-  { code: 25, name: "25 - Constantine", home: 550, stopdesk: 350 },
-  { code: 9, name: "09 - Blida", home: 450, stopdesk: 250 },
-  { code: 19, name: "19 - Sétif", home: 500, stopdesk: 300 },
-  { code: 23, name: "23 - Annaba", home: 600, stopdesk: 350 },
-  { code: 13, name: "13 - Tlemcen", home: 600, stopdesk: 350 },
-  { code: 6, name: "06 - Béjaïa", home: 550, stopdesk: 300 },
-  { code: 15, name: "15 - Tizi Ouzou", home: 500, stopdesk: 300 },
-  { code: 35, name: "35 - Boumerdès", home: 450, stopdesk: 250 },
-  { code: 42, name: "42 - Tipaza", home: 450, stopdesk: 250 },
-  { code: 11, name: "11 - Tamanrasset", home: 900, stopdesk: 600 },
-  { code: 30, name: "30 - Ouargla", home: 800, stopdesk: 500 },
-  { code: 7, name: "07 - Biskra", home: 650, stopdesk: 400 },
-  { code: 10, name: "10 - Bouira", home: 500, stopdesk: 300 },
-  { code: 22, name: "22 - Sidi Bel Abbès", home: 600, stopdesk: 350 },
+  { code: 1, name: "01 - Adrar", home: 1100, stopdesk: 600 },
+  { code: 2, name: "02 - Chlef", home: 690, stopdesk: 400 },
+  { code: 3, name: "03 - Laghouat", home: 900, stopdesk: 500 },
+  { code: 4, name: "04 - Oum El Bouaghi", home: 850, stopdesk: 400 },
+  { code: 5, name: "05 - Batna", home: 850, stopdesk: 400 },
+  { code: 6, name: "06 - Béjaïa", home: 790, stopdesk: 400 },
+  { code: 7, name: "07 - Biskra", home: 950, stopdesk: 500 },
+  { code: 8, name: "08 - Béchar", home: 1000, stopdesk: 600 },
+  { code: 9, name: "09 - Blida", home: 600, stopdesk: 400 },
+  { code: 10, name: "10 - Bouira", home: 690, stopdesk: 400 },
+  { code: 11, name: "11 - Tamanrasset", home: 1100, stopdesk: 600 },
+  { code: 12, name: "12 - Tébessa", home: 850, stopdesk: 400 },
+  { code: 13, name: "13 - Tlemcen", home: 600, stopdesk: 400 },
+  { code: 14, name: "14 - Tiaret", home: 700, stopdesk: 400 },
+  { code: 15, name: "15 - Tizi Ouzou", home: 690, stopdesk: 400 },
+  { code: 16, name: "16 - Alger", home: 500, stopdesk: 400 },
+  { code: 17, name: "17 - Djelfa", home: 900, stopdesk: 500 },
+  { code: 18, name: "18 - Jijel", home: 790, stopdesk: 400 },
+  { code: 19, name: "19 - Sétif", home: 750, stopdesk: 400 },
+  { code: 20, name: "20 - Saïda", home: 790, stopdesk: 400 },
+  { code: 21, name: "21 - Skikda", home: 690, stopdesk: 400 },
+  { code: 22, name: "22 - Sidi Bel Abbès", home: 600, stopdesk: 400 },
+  { code: 23, name: "23 - Annaba", home: 800, stopdesk: 400 },
+  { code: 24, name: "24 - Guelma", home: 850, stopdesk: 450 },
+  { code: 25, name: "25 - Constantine", home: 800, stopdesk: 400 },
+  { code: 26, name: "26 - Médéa", home: 690, stopdesk: 400 },
+  { code: 27, name: "27 - Mostaganem", home: 600, stopdesk: 400 },
+  { code: 28, name: "28 - M'Sila", home: 800, stopdesk: 400 },
+  { code: 29, name: "29 - Mascara", home: 650, stopdesk: 400 },
+  { code: 30, name: "30 - Ouargla", home: 900, stopdesk: 500 },
+  { code: 31, name: "31 - Oran", home: 450, stopdesk: 250 },
+  { code: 32, name: "32 - El Bayadh", home: 900, stopdesk: 500 },
+  { code: 33, name: "33 - Illizi", home: 1300, stopdesk: 600 },
+  { code: 34, name: "34 - Bordj Bou Arréridj", home: 790, stopdesk: 400 },
+  { code: 35, name: "35 - Boumerdès", home: 690, stopdesk: 350 },
+  { code: 36, name: "36 - El Tarf", home: 850, stopdesk: 500 },
+  { code: 37, name: "37 - Tindouf", home: 1300, stopdesk: 600 },
+  { code: 38, name: "38 - Tissemsilt", home: 750, stopdesk: 400 },
+  { code: 39, name: "39 - El Oued", home: 950, stopdesk: 550 },
+  { code: 40, name: "40 - Khenchela", home: 800, stopdesk: 400 },
+  { code: 41, name: "41 - Souk Ahras", home: 800, stopdesk: 500 },
+  { code: 42, name: "42 - Tipaza", home: 690, stopdesk: 350 },
+  { code: 43, name: "43 - Mila", home: 690, stopdesk: 400 },
+  { code: 44, name: "44 - Aïn Defla", home: 690, stopdesk: 400 },
+  { code: 45, name: "45 - Naâma", home: 900, stopdesk: 500 },
+  { code: 46, name: "46 - Aïn Témouchent", home: 600, stopdesk: 400 },
+  { code: 47, name: "47 - Ghardaïa", home: 990, stopdesk: 500 },
+  { code: 48, name: "48 - Relizane", home: 690, stopdesk: 400 },
+  { code: 49, name: "49 - Timimoun", home: 1700, stopdesk: 1100 },
+  { code: 50, name: "50 - Bordj Badji Mokhtar", home: 1100, stopdesk: 600 },
+  { code: 51, name: "51 - Ouled Djellal", home: 900, stopdesk: 600 },
+  { code: 52, name: "52 - Béni Abbès", home: 1100, stopdesk: 600 },
+  { code: 53, name: "53 - In Salah", home: 900, stopdesk: 600 },
+  { code: 54, name: "54 - In Guezzam", home: 990, stopdesk: 500 },
+  { code: 55, name: "55 - Touggourt", home: 990, stopdesk: 500 },
+  { code: 56, name: "56 - Djanet", home: 1700, stopdesk: 1100 },
+  { code: 57, name: "57 - El M'Ghair", home: 1000, stopdesk: 750 },
+  { code: 58, name: "58 - El Meniaa", home: 1700, stopdesk: 1100 },
+  { code: 59, name: "59 - Aflou (via Laghouat)", home: 900, stopdesk: 500 },
+  { code: 60, name: "60 - Barika (via Batna)", home: 850, stopdesk: 400 },
+  { code: 61, name: "61 - El Kantara (via Biskra)", home: 950, stopdesk: 500 },
+  { code: 62, name: "62 - Bir El Ater (via Tébessa)", home: 850, stopdesk: 400 },
+  { code: 63, name: "63 - El Aricha (via Tlemcen)", home: 600, stopdesk: 400 },
+  { code: 64, name: "64 - Ksar Chellala (via Tiaret)", home: 700, stopdesk: 400 },
+  { code: 65, name: "65 - Aïn Ouessara (via Djelfa)", home: 900, stopdesk: 500 },
+  { code: 66, name: "66 - Messaad (via Djelfa)", home: 900, stopdesk: 500 },
+  { code: 67, name: "67 - Ksar El Boukhari (via Médéa)", home: 690, stopdesk: 400 },
+  { code: 68, name: "68 - Bou Saâda (via M'Sila)", home: 800, stopdesk: 400 },
+  { code: 69, name: "69 - El Abiodh Sidi Cheikh (via El Bayadh)", home: 900, stopdesk: 500 },
 ];
-
-// Complément pour atteindre 58 wilayas (démo)
-const extraNames = ["Adrar","Chlef","Laghouat","Oum El Bouaghi","Batna","Djelfa","Tébessa","Tiaret","Tizi","Alger","Sidi","Skikda","Jijel","Mascara","Mila","Mostaganem","M'Sila","Ghardaia","Relizane","El Oued","Khenchela","Souk Ahras","Naama","Ain Temouchent","Ghardaia2","Illizi","Tindouf","El Bayadh"];
-extraNames.forEach((n, i) => {
-  const code = i + 1;
-  if (!WILAYAS.find((w) => w.code === code))
-    WILAYAS.push({ code, name: `${String(code).padStart(2, "0")} - ${n}`, home: 600, stopdesk: 350 });
-});
-WILAYAS.sort((a, b) => a.code - b.code);
 
 export const formatDA = (n: number) => `${n.toLocaleString("fr-DZ")} DA`;
 

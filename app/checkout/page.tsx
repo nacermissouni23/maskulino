@@ -1,27 +1,75 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/components/CartProvider";
-import { WILAYAS, formatDA } from "@/lib/data";
+import { formatDA } from "@/lib/data";
+import { COMMUNES } from "@/lib/communes";
 import { ShieldCheck } from "lucide-react";
+import { createOrder } from "@/lib/actions/orders";
+import { getShopContextAction, getActivePromos, resolveCart } from "@/lib/actions/storefront";
+import type { ShopContext } from "@/lib/storefront";
+
+const FALLBACK: ShopContext = {
+  carriers: [{ id: "yalidine", nom: "Yalidine" }],
+  prices: { yalidine: { 16: { home: 500, stopdesk: 400, couvert: true } } },
+  wilayas: [{ code: 16, name: "16 - Alger" }],
+};
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
   const [f, setF] = useState({ name: "", phone: "", wilaya: 16, commune: "", address: "", ship: "home" as "home" | "stopdesk", promo: "" });
   const [err, setErr] = useState("");
-  const [done, setDone] = useState(false);
-  const wil = useMemo(() => WILAYAS.find((w) => w.code === Number(f.wilaya))!, [f.wilaya]);
-  const ship = f.ship === "home" ? wil.home : wil.stopdesk;
-  const discount = f.promo.trim().toUpperCase() === "DZ10" ? Math.round(subtotal * 0.1) : 0;
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ number: string; total: number } | null>(null);
+  const [ctx, setCtx] = useState<ShopContext>(FALLBACK);
+  const [promos, setPromos] = useState<{ code: string; type: string; value: number }[]>([]);
+  const idemRef = useRef("");
+
+  useEffect(() => {
+    getShopContextAction().then(setCtx).catch(() => undefined);
+    getActivePromos().then(setPromos).catch(() => undefined);
+  }, []);
+
+  const wil = ctx.wilayas.find((w) => w.code === Number(f.wilaya)) ?? ctx.wilayas[0] ?? FALLBACK.wilayas[0];
+  const table = ctx.prices["yalidine"]?.[Number(f.wilaya)];
+  const ship = f.ship === "home" ? (table?.home ?? 500) : (table?.stopdesk ?? table?.home ?? 500);
+  const promo = promos.find((p) => p.code.toUpperCase() === f.promo.trim().toUpperCase());
+  const discount = promo ? (promo.type === "pourcentage" ? Math.round(subtotal * promo.value / 100) : Math.min(promo.value, subtotal)) : 0;
   const total = subtotal - discount + (items.length ? ship : 0);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     if (!items.length) return setErr("Votre panier est vide.");
     if (f.name.trim().length < 3) return setErr("Veuillez saisir votre nom complet.");
     if (!/^(05|06|07)\d{8}$/.test(f.phone.replace(/[\s-]/g, ""))) return setErr("Téléphone invalide — exemple : 0550123456.");
-    if (!f.commune.trim()) return setErr("Veuillez saisir votre commune.");
-    setErr(""); setDone(true); clear();
+    if (!f.commune) return setErr("Sélectionnez votre commune dans la liste.");
+    setErr("");
+    setBusy(true);
+    const resolved = await resolveCart(items.map((i) => ({ slug: i.slug, size: i.size, qty: i.qty })));
+    if (!resolved.ok) {
+      setBusy(false);
+      return setErr(resolved.code === "RUPTURE"
+        ? "Un article n'est plus en stock — modifiez votre panier."
+        : "Un article n'est plus disponible — modifiez votre panier.");
+    }
+    if (!idemRef.current && typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      idemRef.current = crypto.randomUUID();
+    }
+    const res = await createOrder({
+      name: f.name, phone: f.phone, wilaya: Number(f.wilaya), commune: f.commune,
+      address: f.address, landmark: "", delivery: f.ship === "home" ? "domicile" : "stopdesk",
+      carrier: "yalidine", items: resolved.items, source: "direct", campaign: "",
+      promo: f.promo.trim(), idempotency: idemRef.current || `${Date.now()}`,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      if (res.code.startsWith("RUPTURE")) return setErr("Un article vient de s'épuiser — modifiez votre panier.");
+      if (res.code === "RATE_LIMITED") return setErr("Trop de tentatives — réessayez dans une heure.");
+      return setErr("Commande impossible pour le moment — réessayez.");
+    }
+    clear();
+    setDone({ number: res.number, total: res.total });
   };
 
   if (done)
@@ -30,7 +78,8 @@ export default function CheckoutPage() {
         <div className="card-soft p-8 md:p-10 text-center">
           <p className="w-14 h-14 rounded-full bg-[#20744d] text-white font-bold text-2xl flex items-center justify-center mx-auto">✓</p>
           <h1 className="font-display font-bold text-3xl mt-4">Commande confirmée !</h1>
-          <p className="text-sm font-light text-stone-600 mt-3 leading-relaxed">Merci {f.name}. Nous vous appellerons au <span className="font-semibold text-stone-900">{f.phone}</span> en moins de 4 h. Total en espèces : <span className="font-bold text-stone-900">{formatDA(total)}</span> ({f.ship === "home" ? "à domicile" : "au bureau"} — {wil.name}).</p>
+          <p className="text-sm font-light text-stone-600 mt-3 leading-relaxed">Merci {f.name}. Nous vous appellerons au <span className="font-semibold text-stone-900">{f.phone}</span> en moins de 4 h. Total en espèces : <span className="font-bold text-stone-900">{formatDA(done.total)}</span> ({f.ship === "home" ? "à domicile" : "au bureau"} — {wil.name}).</p>
+          <p className="text-xs font-light text-stone-500 mt-2">N° de suivi : {done.number} — Suivez-le sur la page Suivi.</p>
           <div className="flex flex-wrap gap-2.5 justify-center mt-7">
             <Link href="/track-order" className="btn-fluid">Suivre ma commande</Link>
             <Link href="/shop" className="btn-ghost">Continuer mes achats</Link>
@@ -49,26 +98,31 @@ export default function CheckoutPage() {
           <div className="grid sm:grid-cols-2 gap-3.5">
             <label className="text-xs font-semibold">Nom complet *<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="input-soft mt-1.5" placeholder="Ex : Yacine Benali" /></label>
             <label className="text-xs font-semibold">Téléphone *<input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} inputMode="tel" className="input-soft mt-1.5" placeholder="0550 00 00 00" /></label>
-            <label className="text-xs font-semibold">Wilaya *
-              <select value={f.wilaya} onChange={(e) => setF({ ...f, wilaya: Number(e.target.value) })} className="input-soft mt-1.5">
-                {WILAYAS.map((w) => <option key={w.code} value={w.code}>{w.name}</option>)}
+            <label className="text-xs font-semibold min-w-0">Wilaya *
+              <select value={f.wilaya} onChange={(e) => setF({ ...f, wilaya: Number(e.target.value), commune: "" })} className="input-soft mt-1.5">
+                {ctx.wilayas.map((w) => <option key={w.code} value={w.code}>{w.name}</option>)}
               </select>
             </label>
-            <label className="text-xs font-semibold">Commune *<input value={f.commune} onChange={(e) => setF({ ...f, commune: e.target.value })} className="input-soft mt-1.5" placeholder="Ex : Bab Ezzouar" /></label>
+            <label className="text-xs font-semibold min-w-0">Commune *
+              <select value={f.commune} onChange={(e) => setF({ ...f, commune: e.target.value })} className="input-soft mt-1.5">
+                <option value="">Sélectionnez…</option>
+                {(COMMUNES[Number(f.wilaya)] ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
             <label className="text-xs font-semibold sm:col-span-2">Adresse / point de repère<input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} className="input-soft mt-1.5" placeholder="Rue, arrêt de bus, mosquée…" /></label>
           </div>
           <div>
             <p className="text-xs font-semibold mb-1.5">Mode de livraison</p>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setF({ ...f, ship: "home" })} className={`py-3.5 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${f.ship === "home" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>À domicile — {formatDA(wil.home)}</button>
-              <button type="button" onClick={() => setF({ ...f, ship: "stopdesk" })} className={`py-3.5 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${f.ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>Au bureau — {formatDA(wil.stopdesk)}</button>
+              <button type="button" onClick={() => setF({ ...f, ship: "home" })} className={`py-3.5 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${f.ship === "home" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>À domicile — {formatDA(table?.home ?? 500)}</button>
+              <button type="button" onClick={() => setF({ ...f, ship: "stopdesk" })} className={`py-3.5 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${f.ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>Au bureau — {formatDA(table?.stopdesk ?? table?.home ?? 500)}</button>
             </div>
           </div>
           <label className="text-xs font-semibold block">Code promo (DZ10 = -10 %)
             <input value={f.promo} onChange={(e) => setF({ ...f, promo: e.target.value })} className="input-soft mt-1.5 uppercase" placeholder="DZ10" />
           </label>
           {err && <p className="text-xs font-medium text-[#c0452f] bg-[#fdf0ec] border border-[#f3d4c8] p-2.5 rounded-[10px]">{err}</p>}
-          <button className="btn-fluid w-full !py-4">Confirmer — {formatDA(total)}</button>
+          <button disabled={busy} className="btn-fluid w-full !py-4 disabled:opacity-50">{busy ? "Envoi…" : <>Confirmer — {formatDA(total)}</>}</button>
           <p className="flex items-center justify-center gap-1.5 text-[11px] font-light text-stone-500"><ShieldCheck size={13} className="text-[#20744d]" /> Vous ne payez qu'à la réception du colis</p>
         </form>
         <aside className="card-soft p-6 lg:sticky lg:top-24">

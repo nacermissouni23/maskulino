@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
+import { ShopProvider } from "@/lib/shop-settings";
+import { ShippingProvider } from "@/lib/shipping";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BottomNav from "@/components/BottomNav";
-import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 const poppins = Poppins({
   variable: "--font-sans",
@@ -15,15 +15,16 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Maskulino — Mode Homme Algérie | Paiement à la livraison 58 wilayas",
+  title: "Maskulino",
   description:
-    "Maskulino — boutique algérienne de vêtements pour homme. Hoodies, chemises, jeans, ensembles. Paiement à la livraison dans les 58 wilayas. Commandez sur le site, Facebook ou WhatsApp.",
-  metadataBase: new URL("https://maskulino.dz"),
+    "Maskulino — boutique algérienne de vêtements pour homme. Hoodies, chemises, jeans, ensembles. Commandez sur le site, Facebook ou WhatsApp.",
+  metadataBase: new URL("https://maskulino.store"),
   openGraph: {
     title: "Maskulino — Rehaussez votre style",
     description: "Mode homme en Algérie. Paiement à la livraison, 58 wilayas. Échange gratuit sous 7 jours.",
     type: "website",
   },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -33,16 +34,20 @@ export const viewport: Viewport = {
   themeColor: "#f5f3ee",
 };
 
+
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={poppins.variable}>
       <body className="min-h-screen flex flex-col antialiased font-[family-name:var(--font-sans)]">
         <CartProvider>
-          <Header />
-          <main className="flex-1 pb-20 md:pb-0">{children}</main>
-          <Footer />
-          <BottomNav />
-          <WhatsAppFloat />
+          <ShopProvider>
+            <ShippingProvider>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </ShippingProvider>
+          </ShopProvider>
         </CartProvider>
       </body>
     </html>
