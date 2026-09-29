@@ -330,3 +330,22 @@ export async function latestOrderInfo() {
     .eq("status", "a_confirmer").eq("is_demo", false);
   return { latestId: (data as { id: string } | null)?.id ?? null, toConfirm: count ?? 0 };
 }
+
+/**
+ * Single-row poll for admin browser alerts: the newest order with ALL details
+ * (client name, phone, items with size/color/qty, total) + the à-confirmer count.
+ * The admin page itself turns this into a local Notification + sound + vibration —
+ * no push service, no device tokens to store.
+ */
+export async function latestOrderFull() {
+  const admin = createAdminClient();
+  const [{ data }, { count }] = await Promise.all([
+    admin.from("orders").select(ORDER_SELECT).eq("is_demo", false)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    admin.from("orders").select("id", { count: "exact", head: true })
+      .eq("status", "a_confirmer").eq("is_demo", false),
+  ]);
+  if (!data) return { latestId: null as string | null, toConfirm: count ?? 0, order: null as AdminOrder | null };
+  const order = dbOrderToAdmin(data as never as Parameters<typeof dbOrderToAdmin>[0]);
+  return { latestId: (data as { id: string }).id, toConfirm: count ?? 0, order };
+}

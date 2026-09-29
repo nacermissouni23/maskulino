@@ -11,6 +11,7 @@ import {
 import {
   pushTargets, setTelegramUsername, sendTestTelegram,
 } from "@/lib/actions/notify";
+import { subscribeForOrders } from "@/lib/push-client";
 import { Plus, Trash2, Pencil, Bell } from "lucide-react";
 
 type ShopForm = {
@@ -39,6 +40,8 @@ export default function AdminSettings() {
   const [tgUser, setTgUser] = useState("");
   const [tgActive, setTgActive] = useState(false);
   const [notifMsg, setNotifMsg] = useState("");
+  const [pushDevices, setPushDevices] = useState(0);
+  const [pushBusy, setPushBusy] = useState(false);
 
   async function loadAll() {
     const [cs, sh, cr, pr, wz, tg] = await Promise.all([
@@ -56,6 +59,7 @@ export default function AdminSettings() {
     setWilayas(wz);
     setTgUser(tg.telegram);
     setTgActive(tg.telegramActive);
+    fetch("/api/push/subscribe").then((r) => r.json()).then((j) => setPushDevices(j.count ?? 0)).catch(() => undefined);
   }
   useEffect(() => { loadAll(); }, []);
 
@@ -135,6 +139,28 @@ export default function AdminSettings() {
   async function testTelegram() {
     const r = await sendTestTelegram();
     setNotifMsg(r.ok ? (r.sent > 0 ? "Message Telegram envoyé ✅" : "Telegram non connecté — touchez Start dans le bot.") : "Bot non configuré.");
+  }
+
+  async function enablePushHere() {
+    setPushBusy(true);
+    setNotifMsg("");
+    const r = await subscribeForOrders();
+    if (!r.ok) {
+      setNotifMsg(r.code === "DENIED" ? "Notifications bloquées — autorisez-les dans le navigateur puis réessayez." : "Activation impossible — réessayez.");
+      setPushBusy(false);
+      return;
+    }
+    const j = await fetch("/api/push/subscribe").then((x) => x.json()).catch(() => ({ count: pushDevices }));
+    setPushDevices(j.count ?? pushDevices);
+    setNotifMsg("Alertes activées sur cet appareil ✅ — même navigateur fermé / téléphone verrouillé.");
+    setPushBusy(false);
+  }
+
+  async function testPush() {
+    setPushBusy(true);
+    const r = await fetch("/api/push/test", { method: "POST" }).then((x) => x.json()).catch(() => null);
+    setNotifMsg(r?.ok ? `Notification de test envoyée ✅ (${r.sent ?? 0} appareil${(r.sent ?? 0) > 1 ? "s" : ""}).` : "Aucun appareil abonné ou clés VAPID manquantes.");
+    setPushBusy(false);
   }
 
   return (
@@ -284,8 +310,16 @@ export default function AdminSettings() {
 
       <div className="card-soft p-5 mt-3">
         <p className="font-title font-semibold text-sm flex items-center gap-2"><Bell size={15} /> Alertes de commandes</p>
-        <p className="text-[11px] font-light text-stone-400 mt-0.5">Notification + son à chaque commande, directement sur Telegram.</p>
+        <p className="text-[11px] font-light text-stone-400 mt-0.5">Push + son + vibration à chaque commande — même navigateur fermé / téléphone verrouillé — plus Telegram en copie.</p>
         <div className="bg-[#f5f3ee] border border-[#e8e3d8] rounded-xl p-3.5 mt-3">
+          <p className="text-xs font-semibold">Notifications push {pushDevices > 0 && <span className="font-bold text-[#20744d]">· {pushDevices} appareil{pushDevices > 1 ? "s" : ""}</span>}</p>
+          <p className="text-[11px] font-light text-stone-500 mt-0.5">Activez sur chaque téléphone / PC qui doit recevoir les commandes.</p>
+          <div className="flex gap-1.5 mt-2.5">
+            <button onClick={enablePushHere} disabled={pushBusy} className="btn-dark !py-2 flex-1 disabled:opacity-50">{pushBusy ? "…" : "Activer sur cet appareil"}</button>
+            <button onClick={testPush} disabled={pushBusy} className="flex-1 h-12 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold disabled:opacity-50">Envoyer un test</button>
+          </div>
+        </div>
+        <div className="bg-[#f5f3ee] border border-[#e8e3d8] rounded-xl p-3.5 mt-2.5">
           <p className="text-xs font-semibold">Telegram {tgActive && <span className="font-bold text-[#20744d]">· connecté</span>}</p>
           <div className="flex gap-1.5 mt-2.5">
             <input value={tgUser} onChange={(e) => setTgUser(e.target.value)} placeholder="@username" className="input-soft !h-11 flex-1 min-w-0" />

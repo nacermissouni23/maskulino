@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard, ShoppingCart, Package, Users, ChartLine, Settings, Store, Bell, X,
 } from "lucide-react";
-import { latestOrderInfo, listOrders } from "@/lib/actions/orders";
+import { latestOrderFull } from "@/lib/actions/orders";
+import { pushSupported, subscribeForOrders, getPushState } from "@/lib/push-client";
+import type { AdminOrder } from "@/lib/admin-data";
 
 const NAV = [
   { href: "/imad29052005", label: "Tableau de bord", icon: LayoutDashboard },
@@ -28,7 +30,8 @@ function ding() {
   try {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
-    [660, 880].forEach((f, i) => {
+    if (ctx.state === "suspended") void ctx.resume().catch(() => undefined);
+    [660, 880, 990].forEach((f, i) => {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = "sine";
@@ -43,58 +46,117 @@ function ding() {
   } catch { /* silent */ }
 }
 
+function buzz() {
+  try {
+    (navigator as Navigator & { vibrate?: (p: number[]) => boolean }).vibrate?.([250, 120, 250, 120, 400]);
+  } catch { /* iOS/PC: ignored */ }
+}
+
+function orderBody(o: AdminOrder) {
+  const lines = o.items.map((it) =>
+    `• ${it.qty}× ${it.name} (${it.size} · ${it.color}) — ${(it.qty * it.price).toLocaleString("fr-DZ")} DA`
+  );
+  return [
+    `${o.client} · ${o.phone}`,
+    ...lines,
+    `Total : ${o.total.toLocaleString("fr-DZ")} DA`,
+  ].join("\n");
+}
+
+function fireOrderAlert(o: AdminOrder) {
+  ding();
+  buzz();
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(`Nouvelle commande ${o.id}`, {
+        body: orderBody(o),
+        tag: o.id,
+        requireInteraction: true,
+        silent: false,
+        icon: "/icon.svg",
+      });
+    }
+  } catch { /* fallback: in-page toast below */ }
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const title = TITLES[path] ?? "Administration";
   const [toConfirm, setToConfirm] = useState(0);
   const [showPerm, setShowPerm] = useState(false);
+  const [permState, setPermState] = useState<"default" | "granted" | "denied" | "unsupported">("default");
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState("");
+  const [freshOrder, setFreshOrder] = useState<AdminOrder | null>(null);
   const lastId = useRef<string | null>(null);
   const firstPoll = useRef(true);
 
+  // Demande d'activation : à chaque entrée sur l'admin, si CET appareil n'est pas
+  // abonné aux alertes de fond, on affiche le bandeau. Au clic sur Activer, le
+  // navigateur affiche sa vraie question (Autoriser / Bloquer) puis l'appareil
+  // est enregistré côté serveur → alertes même navigateur fermé / téléphone verrouillé.
   useEffect(() => {
-    try {
-      if ("Notification" in window && Notification.permission === "default" && !localStorage.getItem("maskulino.push.asked")) {
-        setShowPerm(true);
-      }
-    } catch { /* ignore */ }
+    (async () => {
+      try {
+        if (!pushSupported()) {
+          setPermState("unsupported");
+          setShowPerm(true);
+          return;
+        }
+        const st = await getPushState();
+        setPermState(st.permission === "unsupported" ? "unsupported" : st.permission);
+        setShowPerm(!st.subscribed);
+        if (st.subscribed) {
+          try { localStorage.setItem("maskulino.notif.granted", "1"); } catch { /* ignore */ }
+        }
+      } catch { /* ignore */ }
+    })();
     async function poll() {
       try {
-        const info = await latestOrderInfo();
+        const info = await latestOrderFull();
         setToConfirm(info.toConfirm);
-        if (!firstPoll.current && info.latestId && lastId.current && info.latestId !== lastId.current) {
-          const list = await listOrders().catch(() => []);
-          const fresh = list[0];
-          if (fresh) {
-            ding();
-            if ("Notification" in window && Notification.permission === "granted") {
-              new Notification(`Nouvelle commande ${fresh.id}`, {
-                body: `${fresh.client} · ${fresh.wilaya} · ${fresh.total.toLocaleString("fr-DZ")} DA · ${fresh.source}`,
-                tag: fresh.id,
-              });
-            }
-          }
+        if (!firstPoll.current && info.latestId && lastId.current && info.latestId !== lastId.current && info.order) {
+          fireOrderAlert(info.order);
+          setFreshOrder(info.order);
         }
         if (info.latestId) lastId.current = info.latestId;
       } catch { /* offline: keep quiet */ }
       firstPoll.current = false;
     }
     poll();
-    const t = setInterval(poll, 20000);
+    const t = setInterval(poll, 10000);
     return () => clearInterval(t);
   }, []);
 
   async function enableAlerts() {
-    try { localStorage.setItem("maskulino.push.asked", "1"); } catch { /* ignore */ }
+    setPushBusy(true);
+    setPushMsg("");
+    const r = await subscribeForOrders();
+    setPushBusy(false);
+    if (!r.ok) {
+      if (r.code === "DENIED") {
+        setPermState("denied");
+        setPushMsg("Vous avez bloqué les notifications — rouvrez le cadenas / réglages du site → Autoriser, puis réessayez.");
+      } else if (r.code === "UNSUPPORTED") {
+        setPermState("unsupported");
+      } else if (r.code === "NO_VAPID_KEY") {
+        setPushMsg("Clé push manquante côté serveur (NEXT_PUBLIC_VAPID_PUBLIC_KEY) — ajoutez-la sur Vercel puis rechargez.");
+      } else {
+        setPushMsg("Enregistrement impossible — vérifiez la connexion puis réessayez.");
+      }
+      return;
+    }
+    setPermState("granted");
     setShowPerm(false);
-    if (!("Notification" in window)) return;
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") return;
-    new Notification("Notifications activées ✅", { body: "Tu recevras chaque commande ici." });
     ding();
+    buzz();
+    // Preuve immédiate : une vraie notification de fond arrive sur cet appareil.
+    await fetch("/api/push/test", { method: "POST" }).catch(() => null);
   }
 
   function dismissPerm() {
-    try { localStorage.setItem("maskulino.push.asked", "1"); } catch { /* ignore */ }
+    // Masqué pour cette session seulement : à la prochaine entrée on redemande
+    // tant que le navigateur n'a pas autorisé.
     setShowPerm(false);
   }
 
@@ -152,9 +214,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {showPerm && (
             <div className="card-soft p-4 mb-3 flex items-center gap-3">
               <span className="w-9 h-9 rounded-full bg-[#fbeae4] text-[#c0452f] flex items-center justify-center shrink-0"><Bell size={15} /></span>
-              <p className="text-xs font-normal flex-1">Activer les alertes de commandes ? <span className="font-light text-stone-500">Son + notification à chaque commande.</span></p>
-              <button onClick={enableAlerts} className="h-9 px-4 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold shrink-0">Activer</button>
+              <p className="text-xs font-normal flex-1">
+                {permState === "denied" ? (
+                  <>Notifications bloquées dans ce navigateur. <span className="font-light text-stone-500">Ouvrez les réglages du site (cadenas / réglages) → Notifications → Autoriser, puis cliquez Réessayer.</span></>
+                ) : permState === "unsupported" ? (
+                  <>Ce navigateur n&apos;affiche pas les notifications. <span className="font-light text-stone-500">Sur iPhone, ajoutez la page à l&apos;écran d&apos;accueil (Partager → Écran d&apos;accueil) puis réactivez. Sinon laissez cette page ouverte : chaque commande sonne ici.</span></>
+                ) : (
+                  <>Activer les alertes de commandes ? <span className="font-light text-stone-500">Le navigateur va vous demander d&apos;autoriser. Ensuite : son + vibration avec nom, téléphone, articles et total — même navigateur fermé / téléphone verrouillé.</span></>
+                )}
+                {pushMsg && <span className="block font-medium text-[#c0452f] mt-1">{pushMsg}</span>}
+              </p>
+              {permState !== "unsupported" && (
+                <button onClick={enableAlerts} disabled={pushBusy} className="h-9 px-4 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold shrink-0 disabled:opacity-50">
+                  {pushBusy ? "…" : permState === "denied" ? "Réessayer" : "Activer"}
+                </button>
+              )}
               <button onClick={dismissPerm} aria-label="Plus tard" className="w-9 h-9 rounded-full border border-[#e8e3d8] bg-white flex items-center justify-center shrink-0"><X size={14} /></button>
+            </div>
+          )}
+          {freshOrder && (
+            <div className="card-soft p-4 mb-3 border-[#20744d] !border-[1.5px]">
+              <div className="flex items-start gap-3">
+                <span className="w-9 h-9 rounded-full bg-[#e7efe9] text-[#20744d] flex items-center justify-center shrink-0"><Bell size={15} /></span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold">Nouvelle commande {freshOrder.id} — {freshOrder.total.toLocaleString("fr-DZ")} DA</p>
+                  <p className="text-xs font-normal mt-0.5">{freshOrder.client} · {freshOrder.phone}</p>
+                  <div className="mt-1.5 space-y-0.5">
+                    {freshOrder.items.map((it, i) => (
+                      <p key={i} className="text-[11px] font-light text-stone-600">• {it.qty}× {it.name} ({it.size} · {it.color})</p>
+                    ))}
+                  </div>
+                  <div className="flex gap-1.5 mt-2.5">
+                    <Link href={`/imad29052005/orders?order=${encodeURIComponent(freshOrder.id)}`} className="h-9 px-4 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold flex items-center">Voir la commande</Link>
+                    <button onClick={() => setFreshOrder(null)} className="h-9 px-4 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold">Fermer</button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           {children}

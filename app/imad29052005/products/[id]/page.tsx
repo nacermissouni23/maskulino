@@ -6,8 +6,21 @@ import Image from "next/image";
 import { fmtDA, type AdminProduct, type ProductImage } from "@/lib/admin-data";
 import { listProductsAdmin, saveProduct } from "@/lib/actions/catalog";
 import { listCategories } from "@/lib/actions/catalog";
-import { COLORS, SIZES, hexOf } from "@/lib/catalog-options";
+import { COLORS, SIZES, type ColorOption } from "@/lib/catalog-options";
 import { ArrowLeft, Plus, X, Star, ChevronLeft, ChevronRight } from "lucide-react";
+
+const LETTER_SET = new Set(SIZES);
+
+function detectSizeMode(variants: AdminProduct["variants"]): "letters" | "numbers" {
+  if (!variants.length) return "letters";
+  return variants.some((v) => !LETTER_SET.has(v.taille)) ? "numbers" : "letters";
+}
+
+function uniqueSizes(variants: AdminProduct["variants"]): string[] {
+  const out: string[] = [];
+  for (const v of variants) if (!out.includes(v.taille)) out.push(v.taille);
+  return out;
+}
 
 type Cell = { on: boolean; qty: number };
 type Matrix = Record<string, Record<string, Cell>>;
@@ -79,6 +92,41 @@ function Form({ product }: { product: AdminProduct | null }) {
   const [selColors, setSelColors] = useState<string[]>(() =>
     product ? [...new Set(product.variants.map((v) => v.couleur))] : []
   );
+  // Tailles : l'admin choisit le système — Lettres (XS…3XL) ou Numéros (chaussures/pantalons).
+  const [sizeMode, setSizeMode] = useState<"letters" | "numbers">(() =>
+    product ? detectSizeMode(product.variants) : "letters"
+  );
+  const [customSizes, setCustomSizes] = useState<string[]>(() =>
+    product ? uniqueSizes(product.variants).filter((s) => !LETTER_SET.has(s)) : []
+  );
+  const [newSize, setNewSize] = useState("");
+  const [sizeErr, setSizeErr] = useState("");
+  // Couleurs perso : ajoutées uniquement dans ce produit (nom + roue chromatique).
+  const [customColors, setCustomColors] = useState<ColorOption[]>(() => {
+    if (!product) return [];
+    const known = new Set(COLORS.map((c) => c.name.toLowerCase()));
+    const seen = new Set<string>();
+    const out: ColorOption[] = [];
+    for (const v of product.variants) {
+      const key = v.couleur.toLowerCase();
+      if (!known.has(key) && !seen.has(key) && v.couleur.trim()) {
+        seen.add(key);
+        out.push({ name: v.couleur, hex: "#c9c4b8" });
+      }
+    }
+    return out;
+  });
+  const [newColorName, setNewColorName] = useState("");
+  const [newColorHex, setNewColorHex] = useState("#1f3350");
+  const [colorErr, setColorErr] = useState("");
+
+  const allColors: ColorOption[] = useMemo(
+    () => [...COLORS, ...customColors],
+    [customColors]
+  );
+  const hexFor = (name: string) =>
+    allColors.find((c) => c.name === name)?.hex ?? "#c9c4b8";
+  const activeSizes: string[] = sizeMode === "letters" ? SIZES : customSizes;
   const [images, setImages] = useState<ProductImage[]>(() =>
     product ? product.images ?? [{ src: product.image, color: product.variants[0]?.couleur ?? "" }] : []
   );
@@ -110,6 +158,40 @@ function Form({ product }: { product: AdminProduct | null }) {
     } else {
       setSelColors((cs) => [...cs, name]);
     }
+  }
+
+  function addSize() {
+    const s = newSize.trim().slice(0, 10);
+    if (!s) { setSizeErr("Tapez une taille — ex. 40."); return; }
+    if (customSizes.some((x) => x.toLowerCase() === s.toLowerCase())) { setSizeErr("Cette taille est déjà ajoutée."); return; }
+    setSizeErr("");
+    setCustomSizes((xs) => [...xs, s]);
+    setNewSize("");
+  }
+
+  function removeSize(s: string) {
+    setCustomSizes((xs) => xs.filter((x) => x !== s));
+    setMatrix((m) => {
+      const nx = { ...m };
+      delete nx[s];
+      return nx;
+    });
+  }
+
+  function addCustomColor() {
+    const nm = newColorName.trim().slice(0, 40);
+    if (!nm) { setColorErr("Donnez un nom — ex. Vert olive."); return; }
+    if (allColors.some((c) => c.name.toLowerCase() === nm.toLowerCase())) { setColorErr("Cette couleur existe déjà."); return; }
+    if (!/^#[0-9a-fA-F]{6}$/.test(newColorHex)) { setColorErr("Choisissez une couleur avec la roue."); return; }
+    setColorErr("");
+    setCustomColors((cs) => [...cs, { name: nm, hex: newColorHex }]);
+    setSelColors((cs) => (cs.includes(nm) ? cs : [...cs, nm]));
+    setNewColorName("");
+  }
+
+  function removeCustomColor(nm: string) {
+    setCustomColors((cs) => cs.filter((c) => c.name !== nm));
+    if (selColors.includes(nm)) toggleColor(nm);
   }
 
   function toggleCell(size: string, color: string) {
@@ -177,9 +259,17 @@ function Form({ product }: { product: AdminProduct | null }) {
 
   async function save() {
     if (!valid || saving) return;
+    if (sizeMode === "numbers" && customSizes.length === 0) {
+      setSaveErr("Ajoutez au moins une taille numérotée (ex. 40) à l'étape 5.");
+      return;
+    }
+    if (selColors.length === 0) {
+      setSaveErr("Sélectionnez au moins une couleur à l'étape 3.");
+      return;
+    }
     setSaving(true);
     setSaveErr("");
-    const variants = SIZES.flatMap((s) =>
+    const variants = activeSizes.flatMap((s) =>
       selColors.flatMap((c) => {
         const cell = matrix[s]?.[c];
         return cell?.on ? [{ size: s, color: c, stock: cell.qty || 0 }] : [];
@@ -253,7 +343,7 @@ function Form({ product }: { product: AdminProduct | null }) {
 
       <div className="card-soft p-4 md:p-5 mt-3">
         <p className="font-title font-semibold text-sm">3 · Couleurs</p>
-        <p className="text-[11px] font-light text-stone-400 mt-0.5">Sélectionnez parmi les couleurs proposées.</p>
+        <p className="text-[11px] font-light text-stone-400 mt-0.5">Sélectionnez parmi les couleurs proposées, ou ajoutez la vôtre (roue + nom) — elle restera uniquement dans ce produit.</p>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-3">
           {COLORS.map((c) => {
             const on = selColors.includes(c.name);
@@ -265,6 +355,31 @@ function Form({ product }: { product: AdminProduct | null }) {
               </button>
             );
           })}
+          {customColors.map((c) => {
+            const on = selColors.includes(c.name);
+            return (
+              <span key={`custom-${c.name}`} className={`relative rounded-xl border-[1.5px] px-2 py-2.5 flex flex-col items-center gap-1.5 transition ${on ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-dashed border-[#a06a2c] bg-white"}`}>
+                <button onClick={() => toggleColor(c.name)} className="flex flex-col items-center gap-1.5" aria-label={c.name}>
+                  <span className="w-6 h-6 rounded-full border border-black/15" style={{ background: c.hex }} />
+                  <span className="text-[11px] font-medium leading-none">{c.name}</span>
+                </button>
+                <button onClick={() => removeCustomColor(c.name)} aria-label={`Retirer ${c.name}`}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-black text-white flex items-center justify-center"><X size={12} /></button>
+              </span>
+            );
+          })}
+        </div>
+        <div className="mt-3 rounded-xl border-[1.5px] border-dashed border-[#e8e3d8] bg-[#faf8f3] p-3">
+          <p className="text-xs font-semibold flex items-center gap-1.5"><Plus size={13} /> Ajouter une couleur à ce produit</p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <label className="flex items-center gap-2 text-xs font-medium bg-white border border-[#e8e3d8] rounded-[10px] px-2.5 h-11">
+              <input type="color" value={newColorHex} onChange={(e) => setNewColorHex(e.target.value)} className="w-8 h-8 rounded cursor-pointer bg-transparent" aria-label="Choisir la teinte" />
+              <span className="font-mono">{newColorHex}</span>
+            </label>
+            <input value={newColorName} onChange={(e) => setNewColorName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomColor(); } }} placeholder="Nom — ex. Vert olive" className="input-soft !h-11 min-w-0 flex-1" maxLength={40} />
+            <button onClick={addCustomColor} className="btn-dark !py-2.5 !h-11 flex items-center gap-1"><Plus size={13} /> Ajouter</button>
+          </div>
+          {colorErr && <p className="text-[11px] font-medium text-[#c0452f] mt-1.5">{colorErr}</p>}
         </div>
       </div>
 
@@ -312,20 +427,52 @@ function Form({ product }: { product: AdminProduct | null }) {
       <div className="card-soft p-4 md:p-5 mt-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="font-title font-semibold text-sm">5 · Stock par taille × couleur</p>
-            <p className="text-[11px] font-light text-stone-400 mt-0.5">Activez les couleurs disponibles dans chaque taille et saisissez les quantités. Le stock total se calcule seul.</p>
+            <p className="font-title font-semibold text-sm">5 · Tailles & stock par taille × couleur</p>
+            <p className="text-[11px] font-light text-stone-400 mt-0.5">Choisissez le système de tailles, activez les couleurs dans chaque taille et saisissez les quantités.</p>
           </div>
           <span className="text-xs font-bold bg-[#e7efe9] text-[#20744d] rounded-full px-3 py-1.5 whitespace-nowrap">Stock total : {total}</span>
         </div>
+        <div className="flex h-11 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white p-1 text-xs font-semibold w-full sm:w-fit mt-3">
+          {(["letters", "numbers"] as const).map((m) => (
+            <button key={m} onClick={() => setSizeMode(m)} className={`flex-1 sm:flex-none px-5 h-full rounded-lg whitespace-nowrap ${sizeMode === m ? "bg-[#1c1b18] text-white" : "text-stone-500"}`}>
+              {m === "letters" ? "Tailles S · M · L…" : "Tailles numérotées"}
+            </button>
+          ))}
+        </div>
+        {sizeMode === "numbers" && (
+          <div className="mt-3 rounded-xl border-[1.5px] border-dashed border-[#e8e3d8] bg-[#faf8f3] p-3">
+            <p className="text-xs font-semibold">Tapez chaque taille puis cliquez Ajouter (ex. 40 pour chaussures, 32 pour pantalons).</p>
+            <div className="flex gap-2 mt-2">
+              <input value={newSize} onChange={(e) => setNewSize(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSize(); } }} placeholder="Ex. 40" className="input-soft !h-11 min-w-0 flex-1" maxLength={10} inputMode="text" />
+              <button onClick={addSize} className="btn-dark !h-11 !py-2 flex items-center gap-1 shrink-0"><Plus size={13} /> Ajouter</button>
+            </div>
+            {sizeErr && <p className="text-[11px] font-medium text-[#c0452f] mt-1.5">{sizeErr}</p>}
+            {customSizes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {customSizes.map((s) => (
+                  <span key={s} className="flex items-center gap-1.5 h-9 pl-3.5 pr-1.5 rounded-full bg-[#1c1b18] text-white text-xs font-semibold">
+                    {s}
+                    <button onClick={() => removeSize(s)} aria-label={`Retirer taille ${s}`} className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center"><X size={12} /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {selColors.length === 0 && <p className="text-xs font-light text-stone-400 mt-3">Sélectionnez d&apos;abord des couleurs à l&apos;étape 3.</p>}
+        {sizeMode === "numbers" && customSizes.length === 0 && <p className="text-xs font-light text-stone-400 mt-3">Ajoutez au moins une taille numérotée ci-dessus.</p>}
         <div className="space-y-2 mt-3">
-          {SIZES.map((s) => {
+          {activeSizes.map((s) => {
             const row = matrix[s] ?? {};
             const rowTotal = selColors.reduce((a, c) => a + (row[c]?.on ? row[c].qty || 0 : 0), 0);
             return (
               <div key={s} className="border border-[#e8e3d8] bg-[#faf8f3] rounded-xl p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold w-10">{s}</p>
+                  <p className="text-sm font-bold min-w-10 flex items-center gap-1.5">{s}
+                    {sizeMode === "numbers" && (
+                      <button onClick={() => removeSize(s)} aria-label={`Retirer taille ${s}`} className="w-6 h-6 rounded-full border border-[#e8e3d8] bg-white items-center justify-center inline-flex"><X size={11} /></button>
+                    )}
+                  </p>
                   <p className="text-[11px] font-medium text-stone-500">Total : <span className="font-bold text-stone-800">{rowTotal}</span></p>
                   <button onClick={() => toggleRow(s)} disabled={selColors.length === 0} className="h-8 px-3 rounded-full border border-[#e8e3d8] bg-white text-[11px] font-semibold disabled:opacity-40">Tout</button>
                 </div>
@@ -337,7 +484,7 @@ function Form({ product }: { product: AdminProduct | null }) {
                       return (
                         <div key={c} className={`rounded-lg border p-1.5 flex items-center gap-1.5 ${on ? "border-[#1c1b18] bg-white" : "border-[#e8e3d8]"}`}>
                           <button onClick={() => toggleCell(s, c)} className="flex items-center gap-1.5 min-w-0 flex-1" title={c}>
-                            <span className="w-5 h-5 rounded-full border border-black/15 shrink-0" style={{ background: hexOf(c) }} />
+                            <span className="w-5 h-5 rounded-full border border-black/15 shrink-0" style={{ background: hexFor(c) }} />
                             <span className={`text-[11px] font-medium truncate ${on ? "" : "text-stone-400"}`}>{c}</span>
                           </button>
                           {on && (
