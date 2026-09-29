@@ -29,12 +29,18 @@ export async function POST(req: Request) {
   if (token) {
     const { data: chats } = await admin.from("telegram_chats").select("chat_id").eq("active", true);
     const totalStr = typeof r.total === "number" ? r.total.toLocaleString("fr-DZ") : (r.total ?? "");
-    const text = [`🛍 ${title}`, `${r.customer_name ?? ""} · ${r.customer_phone ?? ""}`, ...lines, `Total: ${totalStr} DA`].join("\n");
+    const digits = String(r.customer_phone ?? "").replace(/\D/g, "");
+    const waUrl = digits ? `https://wa.me/213${digits.slice(1)}` : "";
+    const contactLines = [
+      `📞 Appeler : <a href="tel:${digits}">${r.customer_phone ?? ""}</a>`,
+      ...(waUrl ? [`💬 WhatsApp : <a href="${waUrl}">ouvrir le chat</a>`] : []),
+    ];
+    const text = [`🛍 ${title}`, `${r.customer_name ?? ""} · ${r.customer_phone ?? ""}`, ...lines, `Total: ${totalStr} DA`, ...contactLines].join("\n");
     for (const c of ((chats ?? []) as { chat_id: string }[])) {
       if (c.chat_id === "pending") continue;
       await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ chat_id: c.chat_id, text }),
+        body: JSON.stringify({ chat_id: c.chat_id, text, parse_mode: "HTML" }),
       }).catch(() => undefined);
     }
   }

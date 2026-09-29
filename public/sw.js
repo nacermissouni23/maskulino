@@ -1,6 +1,6 @@
 /* Maskulino admin push service worker — background order alerts.
  * Shows order notifications even when the tab/browser is closed or the phone is locked.
- * Payload from /api/push/* : { title, body, url, orderId }
+ * Payload from /api/push/* : { title, body, url, orderId, phone, wa, actions }
  */
 self.addEventListener("push", (event) => {
   let data = {};
@@ -22,16 +22,35 @@ self.addEventListener("push", (event) => {
       silent: false,
       vibrate: [250, 120, 250, 120, 400],
       renotify: true,
-      data: { url: data.url || "/imad29052005/orders", orderId: data.orderId || null },
+      actions: Array.isArray(data.actions) ? data.actions.slice(0, 2) : [],
+      data: {
+        url: data.url || "/imad29052005/orders",
+        orderId: data.orderId || null,
+        phone: data.phone || "",
+        wa: data.wa || "",
+      },
     })
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/imad29052005/orders";
+  const d = event.notification.data || {};
+  let url = d.url || "/imad29052005/orders";
+  // Action buttons: call opens the dialer with the number ready, WhatsApp jumps to the chat.
+  if (event.action === "call" && d.phone) url = "tel:" + d.phone;
+  else if (event.action === "whatsapp" && d.wa) url = d.wa;
   event.waitUntil(
     (async () => {
+      if (url.startsWith("tel:")) {
+        // Dialer: no existing tab can handle it — just open it.
+        try {
+          await self.clients.openWindow(url);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
       const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       for (const c of all) {
         try {

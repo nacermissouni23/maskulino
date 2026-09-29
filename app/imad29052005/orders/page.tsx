@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { STATUS_STYLE, fmtDA, type AdminOrder, type AdminOrderStatus } from "@/lib/admin-data";
 import { listOrders, moveOrder, saveDelivery, saveOrderNote } from "@/lib/actions/orders";
-import { MessageCircle, X, Plus, Search } from "lucide-react";
+import { MessageCircle, Phone, X, Plus, Search } from "lucide-react";
 
 const KANBAN = ["Non confirmé", "Confirmé", "En livraison", "Livré", "Retourné", "Annulée"] as const;
 type KanbanCol = (typeof KANBAN)[number];
@@ -272,7 +272,10 @@ function AdminOrdersInner() {
               <p className="label-bold !text-[10px] text-stone-500">Client</p>
               <p className="font-semibold text-sm mt-1">{selected.client} · {selected.phone}</p>
               <p className="text-xs font-light text-stone-500 mt-0.5">{selected.wilaya} · {selected.commune} · {selected.adresse}{selected.repere ? ` · ${selected.repere}` : ""}</p>
-              <a href={`https://wa.me/213${selected.phone.replaceAll(" ", "").slice(1)}`} target="_blank" className="w-full mt-2.5 h-11 rounded-[10px] bg-[#1e8e57] text-white text-xs font-semibold flex items-center justify-center gap-1.5"><MessageCircle size={14} /> WhatsApp</a>
+              <div className="flex gap-2 mt-2.5">
+              <a href={`tel:${selected.phone.replace(/\D/g, "")}`} className="flex-1 h-11 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold flex items-center justify-center gap-1.5"><Phone size={14} /> Appeler</a>
+              <a href={`https://wa.me/213${selected.phone.replace(/\D/g, "").slice(1)}`} target="_blank" className="flex-1 h-11 rounded-[10px] bg-[#1e8e57] text-white text-xs font-semibold flex items-center justify-center gap-1.5"><MessageCircle size={14} /> WhatsApp</a>
+              </div>
             </div>
 
             <div className="card-soft p-4 mt-2.5">

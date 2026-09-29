@@ -37,11 +37,20 @@ export function orderPushPayload(o: OrderPush) {
   const lines = o.items.map(
     (it) => `• ${it.qty}× ${it.name} (${it.size} · ${it.color}) — ${(it.qty * it.unit_price).toLocaleString("fr-DZ")} DA`
   );
+  const digits = o.phone.replace(/\D/g, "");
+  const wa = digits ? `https://wa.me/213${digits.slice(1)}` : "";
   return {
     title: `Nouvelle commande ${o.number} 🛍`,
     body: [`${o.client} · ${o.phone}`, ...lines, `Total : ${o.total.toLocaleString("fr-DZ")} DA`].join("\n"),
     url: `/imad29052005/orders?order=${encodeURIComponent(o.number)}`,
     orderId: o.number,
+    // Action buttons (Android / desktop Chrome — iOS shows the body only).
+    phone: digits,
+    wa,
+    actions: [
+      { action: "call", title: "📞 Appeler" },
+      { action: "whatsapp", title: "💬 WhatsApp" },
+    ],
   };
 }
 

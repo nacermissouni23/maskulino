@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  LayoutDashboard, ShoppingCart, Package, Users, ChartLine, Settings, Store, Bell, X,
+  LayoutDashboard, ShoppingCart, Package, Users, ChartLine, Settings, Store, Bell, MessageCircle, Phone, X,
 } from "lucide-react";
 import { latestOrderFull } from "@/lib/actions/orders";
 import { pushSupported, subscribeForOrders, getPushState } from "@/lib/push-client";
@@ -244,7 +244,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       <p key={i} className="text-[11px] font-light text-stone-600">• {it.qty}× {it.name} ({it.size} · {it.color})</p>
                     ))}
                   </div>
-                  <div className="flex gap-1.5 mt-2.5">
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    <a href={`tel:${freshOrder.phone.replace(/\D/g, "")}`} className="h-9 px-4 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold flex items-center gap-1.5"><Phone size={13} /> Appeler</a>
+                    <a href={`https://wa.me/213${freshOrder.phone.replace(/\D/g, "").slice(1)}`} target="_blank" className="h-9 px-4 rounded-[10px] bg-[#1e8e57] text-white text-xs font-semibold flex items-center gap-1.5"><MessageCircle size={13} /> WhatsApp</a>
                     <Link href={`/imad29052005/orders?order=${encodeURIComponent(freshOrder.id)}`} className="h-9 px-4 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold flex items-center">Voir la commande</Link>
                     <button onClick={() => setFreshOrder(null)} className="h-9 px-4 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold">Fermer</button>
                   </div>
