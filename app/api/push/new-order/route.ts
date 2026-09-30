@@ -14,28 +14,43 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
   let items: { name: string; size: string; color: string; qty: number; unit_price: number }[] = [];
+  let wilayaName = "";
   try {
     if (r?.id) {
       const { data } = await admin.from("order_items")
         .select("name,size,color,qty,unit_price").eq("order_id", r.id);
       items = ((data ?? []) as typeof items);
     }
+    if (r?.wilaya_code) {
+      const { data: w } = await admin.from("wilayas").select("name").eq("code", Number(r.wilaya_code)).maybeSingle();
+      wilayaName = ((w as { name: string } | null)?.name ?? "").replace(/^\d+\s*-\s*/, "");
+    }
   } catch { /* keep header-only */ }
   const lines = items.map(
     (it) => `• ${it.qty}× ${it.name} (${it.size} · ${it.color}) — ${(it.qty * it.unit_price).toLocaleString("fr-DZ")} DA`
   );
 
+  const num = (v: unknown) => (typeof v === "number" ? v.toLocaleString("fr-DZ") : (v ?? ""));
+  const addrLines = [
+    `📍 ${wilayaName || ""} · ${r.commune ?? ""}${r.address ? ` · ${r.address}` : ""}`,
+  ];
+  const moneyLines = [
+    `Produits: ${num(r.subtotal)} DA`,
+    ...(Number(r.discount ?? 0) > 0 ? [`Réduction: −${num(r.discount)} DA`] : []),
+    `Livraison: ${num(r.delivery_fee)} DA`,
+    `Total: ${num(r.total)} DA`,
+  ];
+
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (token) {
     const { data: chats } = await admin.from("telegram_chats").select("chat_id").eq("active", true);
-    const totalStr = typeof r.total === "number" ? r.total.toLocaleString("fr-DZ") : (r.total ?? "");
     const digits = String(r.customer_phone ?? "").replace(/\D/g, "");
     const waUrl = digits ? `https://wa.me/213${digits.slice(1)}` : "";
     const contactLines = [
       `📞 Appeler : <a href="tel:${digits}">${r.customer_phone ?? ""}</a>`,
       ...(waUrl ? [`💬 WhatsApp : <a href="${waUrl}">ouvrir le chat</a>`] : []),
     ];
-    const text = [`🛍 ${title}`, `${r.customer_name ?? ""} · ${r.customer_phone ?? ""}`, ...lines, `Total: ${totalStr} DA`, ...contactLines].join("\n");
+    const text = [`🛍 ${title}`, `${r.customer_name ?? ""} · ${r.customer_phone ?? ""}`, ...addrLines, ...lines, ...moneyLines, ...contactLines].join("\n");
     for (const c of ((chats ?? []) as { chat_id: string }[])) {
       if (c.chat_id === "pending") continue;
       await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -52,6 +67,12 @@ export async function POST(req: Request) {
         number: String(r.number),
         client: String(r.customer_name ?? ""),
         phone: String(r.customer_phone ?? ""),
+        wilaya: wilayaName,
+        commune: String(r.commune ?? ""),
+        address: String(r.address ?? ""),
+        subtotal: Number(r.subtotal ?? 0),
+        discount: Number(r.discount ?? 0),
+        delivery_fee: Number(r.delivery_fee ?? 0),
         total: Number(r.total ?? 0),
         items,
       });

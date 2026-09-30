@@ -160,13 +160,15 @@ export async function saveCustomerNote(phone: string, note: string) {
 export async function getAnalytics() {
   const admin = createAdminClient();
   const { data: orders } = await admin.from("orders")
-    .select("id,number,total,status,source,carrier_id,wilaya_code,created_at,campaign_id,order_items(name,qty,unit_price)")
+    .select("id,number,total,subtotal,discount,status,source,carrier_id,wilaya_code,created_at,campaign_id,order_items(name,qty,unit_price)")
     .eq("is_demo", false).order("created_at", { ascending: false }).limit(2000);
   const list = ((orders ?? []) as {
-    number: string; total: number; status: string; source: string; carrier_id: string | null;
+    number: string; total: number; subtotal: number; discount: number; status: string; source: string; carrier_id: string | null;
     wilaya_code: number | null; created_at: string; campaign_id: string | null;
     order_items: { name: string; qty: number; unit_price: number }[];
   }[]);
+  // Recette réelle = produits uniquement (hors livraison — le transporteur la prend).
+  const rev = (o: { subtotal: number; discount: number }) => o.subtotal - o.discount;
   const { data: wilayas } = await admin.from("wilayas").select("code,name");
   const { data: carriers } = await admin.from("carriers").select("id,name");
   const { data: campaigns } = await admin.from("campaigns").select("id,name,channel,spend,visits");
@@ -181,8 +183,8 @@ export async function getAnalytics() {
     confirmation: n ? Math.round((list.filter((o) => confirmed(o.status)).length / n) * 100) : 0,
     livraison: (() => { const exp = list.filter((o) => ["expediee", "en_livraison", "livree"].includes(o.status)).length; const liv = list.filter((o) => o.status === "livree").length; return exp ? Math.round((liv / exp) * 100) : 0; })(),
     retour: n ? Math.round((list.filter((o) => o.status === "retournee").length / n) * 100) : 0,
-    panier: (() => { const liv = list.filter((o) => o.status === "livree"); return liv.length ? Math.round(liv.reduce((a, o) => a + o.total, 0) / liv.length) : 0; })(),
-    calivre: list.filter((o) => o.status === "livree").reduce((a, o) => a + o.total, 0),
+    panier: (() => { const liv = list.filter((o) => o.status === "livree"); return liv.length ? Math.round(liv.reduce((a, o) => a + rev(o), 0) / liv.length) : 0; })(),
+    calivre: list.filter((o) => o.status === "livree").reduce((a, o) => a + rev(o), 0),
   };
 
   const byProduct = new Map<string, { c: number; conf: number; liv: number; ret: number; ca: number }>();
@@ -201,7 +203,7 @@ export async function getAnalytics() {
     a.c++;
     if (confirmed(o.status)) a.conf++;
     if (["expediee", "en_livraison", "livree"].includes(o.status)) a.exp++;
-    if (o.status === "livree") { a.liv++; a.ca += o.total; }
+    if (o.status === "livree") { a.liv++; a.ca += rev(o); }
     if (o.status === "retournee") a.ret++;
     byWilaya.set(w, a);
   }
@@ -211,7 +213,7 @@ export async function getAnalytics() {
     const c = cname.get(o.carrier_id) ?? o.carrier_id;
     const a = byCarrier.get(c) ?? { exp: 0, liv: 0, ret: 0, ca: 0 };
     if (["expediee", "en_livraison", "livree"].includes(o.status)) a.exp++;
-    if (o.status === "livree") { a.liv++; a.ca += o.total; }
+    if (o.status === "livree") { a.liv++; a.ca += rev(o); }
     if (o.status === "retournee") a.ret++;
     byCarrier.set(c, a);
   }
@@ -220,7 +222,7 @@ export async function getAnalytics() {
     const a = bySource.get(o.source) ?? { c: 0, conf: 0, liv: 0, ca: 0 };
     a.c++;
     if (confirmed(o.status)) a.conf++;
-    if (o.status === "livree") { a.liv++; a.ca += o.total; }
+    if (o.status === "livree") { a.liv++; a.ca += rev(o); }
     bySource.set(o.source, a);
   }
   const byCamp = new Map<string, { canal: string; dep: number; vis: number; c: number; conf: number; liv: number; ca: number }>();
@@ -230,7 +232,7 @@ export async function getAnalytics() {
     const a = byCamp.get(cp.name) ?? { canal: cp.channel, dep: cp.spend, vis: cp.visits, c: 0, conf: 0, liv: 0, ca: 0 };
     a.c++;
     if (confirmed(o.status)) a.conf++;
-    if (o.status === "livree") { a.liv++; a.ca += o.total; }
+    if (o.status === "livree") { a.liv++; a.ca += rev(o); }
     byCamp.set(cp.name, a);
   }
   const daily = new Map<string, { c: number; l: number }>();
@@ -241,7 +243,7 @@ export async function getAnalytics() {
     if (o.status === "livree") a.l++;
     daily.set(d, a);
   }
-  const days = [...daily.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-30);
+  const days = [...daily.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-90);
   return {
     kpi, daily: days.map(([d, a]) => ({ d, ...a })),
     campaigns: [...byCamp.entries()].map(([nom, a]) => ({ nom, ...a })),
@@ -287,15 +289,32 @@ export async function listCustomers() {
 export async function getDashboardStats() {
   const admin = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
-  const [{ count: toConfirm }, { data: recent }, { data: deliveredToday }, { data: lowVars }, { data: topItems }] = await Promise.all([
+  const since30 = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+  const [{ count: toConfirm }, { data: recent }, { data: deliveredToday }, { data: lowVars }, { data: topItems }, { data: monthOrders }] = await Promise.all([
     admin.from("orders").select("id", { count: "exact", head: true }).eq("status", "a_confirmer").eq("is_demo", false),
     admin.from("orders").select(ORDER_SELECT).eq("is_demo", false).order("created_at", { ascending: false }).limit(8),
-    admin.from("orders").select("id,total").eq("status", "livree").eq("is_demo", false).gte("created_at", `${today}T00:00:00`),
+    admin.from("orders").select("id,subtotal,discount").eq("status", "livree").eq("is_demo", false).gte("created_at", `${today}T00:00:00`),
     admin.from("product_variants").select("id,size,color,stock,alert_threshold,products!inner(name,status)").eq("products.status", "en_ligne"),
     admin.from("order_items").select("name,qty,unit_price,orders!inner(status)").eq("orders.status", "livree").eq("orders.is_demo", false).limit(500),
+    admin.from("orders").select("created_at,status").eq("is_demo", false).gte("created_at", `${since30}T00:00:00`).order("created_at").limit(3000),
   ]);
   const ordersToday = await admin.from("orders").select("id", { count: "exact", head: true }).eq("is_demo", false).gte("created_at", `${today}T00:00:00`);
-  const ca = ((deliveredToday ?? []) as { total: number }[]).reduce((a, o) => a + o.total, 0);
+  // CA encaissé = produits uniquement (hors livraison — le transporteur la prend).
+  const ca = ((deliveredToday ?? []) as { subtotal: number; discount: number }[]).reduce((a, o) => a + o.subtotal - o.discount, 0);
+  // Série réelle 30 jours : commandes reçues vs livrées, par jour.
+  const byDay = new Map<string, { c: number; l: number }>();
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10);
+    byDay.set(d, { c: 0, l: 0 });
+  }
+  for (const o of ((monthOrders ?? []) as { created_at: string; status: string }[])) {
+    const d = o.created_at.slice(0, 10);
+    const a = byDay.get(d);
+    if (!a) continue;
+    a.c++;
+    if (o.status === "livree") a.l++;
+  }
+  const daily = [...byDay.entries()].map(([d, a]) => ({ d, ...a }));
   const low = ((lowVars ?? []) as unknown as { size: string; color: string; stock: number; alert_threshold: number; products: { name: string } }[])
     .filter((v) => v.stock <= v.alert_threshold)
     .map((v) => ({ label: `${v.products.name} · ${v.size} · Stock : ${v.stock}` }))
@@ -315,6 +334,7 @@ export async function getDashboardStats() {
     ca,
     low,
     top,
+    daily,
     recent: ((recent ?? []) as never[]).map((o) => dbOrderToAdmin(o as never as Parameters<typeof dbOrderToAdmin>[0])),
   };
 }

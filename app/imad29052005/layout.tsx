@@ -58,7 +58,11 @@ function orderBody(o: AdminOrder) {
   );
   return [
     `${o.client} · ${o.phone}`,
+    `📍 ${o.wilaya} · ${o.commune}${o.adresse ? ` · ${o.adresse}` : ""}`,
     ...lines,
+    `Produits : ${o.sousTotal.toLocaleString("fr-DZ")} DA`,
+    ...(o.reduction > 0 ? [`Réduction : −${o.reduction.toLocaleString("fr-DZ")} DA`] : []),
+    `Livraison : ${o.livraison.toLocaleString("fr-DZ")} DA`,
     `Total : ${o.total.toLocaleString("fr-DZ")} DA`,
   ].join("\n");
 }
@@ -238,12 +242,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <span className="w-9 h-9 rounded-full bg-[#e7efe9] text-[#20744d] flex items-center justify-center shrink-0"><Bell size={15} /></span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold">Nouvelle commande {freshOrder.id} — {freshOrder.total.toLocaleString("fr-DZ")} DA</p>
-                  <p className="text-xs font-normal mt-0.5">{freshOrder.client} · {freshOrder.phone}</p>
+                  <p className="text-xs font-normal mt-0.5" dir="auto">{freshOrder.client} · <span dir="ltr">{freshOrder.phone}</span></p>
+                  <p className="text-[11px] font-light text-stone-500">📍 {freshOrder.wilaya} · {freshOrder.commune}{freshOrder.adresse ? ` · ${freshOrder.adresse}` : ""}</p>
                   <div className="mt-1.5 space-y-0.5">
                     {freshOrder.items.map((it, i) => (
-                      <p key={i} className="text-[11px] font-light text-stone-600">• {it.qty}× {it.name} ({it.size} · {it.color})</p>
+                      <p key={i} className="text-[11px] font-light text-stone-600">• {it.qty}× {it.name} ({it.size} · {it.color}) — {((it.qty * it.price).toLocaleString("fr-DZ"))} DA</p>
                     ))}
                   </div>
+                  <p className="text-[11px] font-light text-stone-500 mt-1.5">Produits : {freshOrder.sousTotal.toLocaleString("fr-DZ")} DA · Livraison : {freshOrder.livraison.toLocaleString("fr-DZ")} DA</p>
                   <div className="flex flex-wrap gap-1.5 mt-2.5">
                     <a href={`tel:${freshOrder.phone.replace(/\D/g, "")}`} className="h-9 px-4 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold flex items-center gap-1.5"><Phone size={13} /> Appeler</a>
                     <a href={`https://wa.me/213${freshOrder.phone.replace(/\D/g, "").slice(1)}`} target="_blank" className="h-9 px-4 rounded-[10px] bg-[#1e8e57] text-white text-xs font-semibold flex items-center gap-1.5"><MessageCircle size={13} /> WhatsApp</a>

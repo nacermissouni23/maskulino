@@ -29,6 +29,12 @@ export type OrderPush = {
   number: string;
   client: string;
   phone: string;
+  wilaya: string;
+  commune: string;
+  address: string;
+  subtotal: number;
+  discount: number;
+  delivery_fee: number;
   total: number;
   items: { name: string; size: string; color: string; qty: number; unit_price: number }[];
 };
@@ -39,9 +45,16 @@ export function orderPushPayload(o: OrderPush) {
   );
   const digits = o.phone.replace(/\D/g, "");
   const wa = digits ? `https://wa.me/213${digits.slice(1)}` : "";
+  const addr = [`📍 ${o.wilaya} · ${o.commune}`, o.address ? `   ${o.address}` : ""].filter(Boolean);
+  const money = [
+    `Produits : ${o.subtotal.toLocaleString("fr-DZ")} DA`,
+    ...(o.discount > 0 ? [`Réduction : −${o.discount.toLocaleString("fr-DZ")} DA`] : []),
+    `Livraison : ${o.delivery_fee.toLocaleString("fr-DZ")} DA`,
+    `Total : ${o.total.toLocaleString("fr-DZ")} DA`,
+  ];
   return {
     title: `Nouvelle commande ${o.number} 🛍`,
-    body: [`${o.client} · ${o.phone}`, ...lines, `Total : ${o.total.toLocaleString("fr-DZ")} DA`].join("\n"),
+    body: [`${o.client} · ${o.phone}`, ...addr, ...lines, ...money].join("\n"),
     url: `/imad29052005/orders?order=${encodeURIComponent(o.number)}`,
     orderId: o.number,
     // Action buttons (Android / desktop Chrome — iOS shows the body only).

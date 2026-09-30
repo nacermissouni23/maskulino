@@ -50,9 +50,9 @@ export default function AdminAnalytics() {
     ["Taux de confirmation", `${d.kpi.confirmation}%`],
     ["Taux de livraison", `${d.kpi.livraison}%`],
     ["Taux de retour", `${d.kpi.retour}%`],
-    ["Panier moyen", fmtDA(d.kpi.panier)],
+    ["Panier moyen (hors livraison)", fmtDA(d.kpi.panier)],
     ["Coût / livrée", livTotal && spend ? fmtDA(Math.round(spend / livTotal)) : "—"],
-    ["ROAS livré", spend ? `${(d.kpi.calivre / spend).toFixed(1)}×` : "—"],
+    ["ROAS livré (hors livraison)", spend ? `${(d.kpi.calivre / spend).toFixed(1)}×` : "—"],
     ["Top transporteur", topCarrier ? `${topCarrier.c} · ${livTotal ? Math.round((topCarrier.liv / livTotal) * 100) : 0}%` : "—"],
   ] : [];
 
@@ -61,7 +61,7 @@ export default function AdminAnalytics() {
       <div className="flex flex-col gap-3">
         <div>
           <h1 className="section-title">Analytics</h1>
-          <p className="section-sub">Pourquoi les résultats arrivent — pas seulement ce qui demande action.</p>
+          <p className="section-sub">Pourquoi les résultats arrivent — pas seulement ce qui demande action. Tous les montants CA = produits uniquement, hors livraison.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1.5">

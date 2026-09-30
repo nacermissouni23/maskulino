@@ -7,11 +7,12 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 
 const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-function MiniChart({ days30 }: { days30: boolean }) {
-  const recues = days30
-    ? [12, 18, 15, 22, 19, 25, 21, 28, 24, 30, 26, 32] : [8, 12, 9, 15, 11, 14, 12];
-  const livrees = days30
-    ? [8, 12, 10, 15, 13, 17, 15, 19, 17, 21, 18, 22] : [5, 8, 6, 10, 8, 9, 8];
+function MiniChart({ data }: { data: { d: string; c: number; l: number }[] }) {
+  const recues = data.map((x) => x.c);
+  const livrees = data.map((x) => x.l);
+  if (recues.length === 0) {
+    return <p className="text-xs font-light text-stone-400 py-10 text-center">Pas encore de données.</p>;
+  }
   const W = 560, H = 160, P = 24;
   const max = Math.max(...recues, ...livrees) + 4;
   const px = (i: number) => P + (i * (W - P * 2)) / (recues.length - 1);
@@ -43,7 +44,7 @@ export default function AdminDashboard() {
     { label: "Commandes aujourd'hui", v: String(s?.ordersToday ?? "—"), d: "+12% vs hier", action: null as string | null },
     { label: "À confirmer", v: String(s?.toConfirm ?? "—"), d: "Action requise", action: "/imad29052005/orders" },
     { label: "Livrées aujourd'hui", v: String(s?.deliveredToday ?? "—"), d: "À encaisser / reverser", action: null as string | null },
-    { label: "CA encaissé", v: s ? fmtDA(s.ca) : "—", d: "Commandes livrées payées", action: null as string | null },
+    { label: "CA encaissé (hors livraison)", v: s ? fmtDA(s.ca) : "—", d: "Commandes livrées payées", action: null as string | null },
     { label: "Stock faible", v: String(s?.low.length ?? "—"), d: "Variantes sous seuil", action: "/imad29052005/products?tab=stock" },
   ];
 
@@ -139,7 +140,7 @@ export default function AdminDashboard() {
             <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-[#1c1b18] rounded" /> Commandes</span>
             <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-[#20744d] rounded" /> Livrées</span>
           </div>
-          <MiniChart days30={periode === "30j"} />
+          <MiniChart data={(s?.daily ?? []).slice(periode === "7j" ? -7 : -30)} />
         </div>
         <div className="card-soft p-4 md:p-5 min-w-0">
           <p className="font-title font-semibold text-sm">Meilleures ventes (livrées)</p>
