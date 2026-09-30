@@ -26,7 +26,7 @@ export async function getPushState(): Promise<{
 }> {
   if (!pushSupported()) return { permission: "unsupported", subscribed: false };
   try {
-    const reg = await navigator.serviceWorker.getRegistration();
+    const reg = await navigator.serviceWorker.getRegistration("/imad29052005/");
     const sub = await reg?.pushManager.getSubscription().catch(() => null);
     return { permission: Notification.permission, subscribed: !!sub };
   } catch {
@@ -43,9 +43,11 @@ export async function subscribeForOrders(): Promise<{ ok: boolean; code?: string
   const perm = await Notification.requestPermission().catch(() => "default" as NotificationPermission);
   if (perm !== "granted") return { ok: false, code: "DENIED" };
 
+  // Scoped to the private admin area only: the service worker must never
+  // control storefront pages, so buyers never see admin install prompts.
   const reg =
-    (await navigator.serviceWorker.getRegistration().catch(() => null)) ??
-    (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+    (await navigator.serviceWorker.getRegistration("/imad29052005/").catch(() => null)) ??
+    (await navigator.serviceWorker.register("/sw.js", { scope: "/imad29052005/" }));
 
   // If the browser already holds a subscription (same device), reuse it.
   let sub = await reg.pushManager.getSubscription().catch(() => null);
@@ -77,7 +79,7 @@ export async function subscribeForOrders(): Promise<{ ok: boolean; code?: string
 
 export async function unsubscribeOrders() {
   try {
-    const reg = await navigator.serviceWorker.getRegistration();
+    const reg = await navigator.serviceWorker.getRegistration("/imad29052005/");
     const sub = await reg?.pushManager.getSubscription().catch(() => null);
     if (sub) {
       await fetch("/api/push/subscribe", {

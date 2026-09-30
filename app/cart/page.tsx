@@ -10,7 +10,7 @@ export default function CartPage() {
   const totalQty = items.reduce((s, i) => s + i.qty, 0);
   return (
     <div className="container-x py-8 md:py-12 max-w-5xl">
-      <p className="eyebrow">Votre sélection</p>
+      <p className="eyebrow">Votre sélection · <span dir="rtl" lang="ar">السلة</span></p>
       <h1 className="section-title mt-2">Panier ({totalQty} article{totalQty > 1 ? "s" : ""})</h1>
       {items.length === 0 ? (
         <div className="card-soft text-center py-14 md:py-20 mt-6 md:mt-8">

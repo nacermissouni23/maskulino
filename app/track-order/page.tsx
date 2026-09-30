@@ -45,10 +45,11 @@ export default function TrackPage() {
     <div className="container-x py-10 md:py-14 max-w-xl">
       <p className="eyebrow text-center">Livraison Yalidine / ZR Express</p>
       <h1 className="section-title text-center mt-2">Suivre ma commande</h1>
-      <p className="section-sub text-center">Saisissez votre n° MSK-xxxx (ex : MSK-1051)</p>
+      <p dir="rtl" lang="ar" className="text-center font-medium text-stone-600 mt-1">تتبع طلبي</p>
+      <p className="section-sub text-center">Saisissez votre n° MSK-xxxx (ex : MSK-1051) · <span dir="rtl" lang="ar">أدخل رقم الطلب</span></p>
       <form onSubmit={submit} className="card-soft p-3 flex gap-2 mt-6">
-        <input value={id} onChange={(e) => setId(e.target.value)} placeholder="MSK-1051" className="flex-1 min-w-0 h-12 bg-[#f5f3ee] rounded-[10px] px-4 uppercase text-sm font-medium outline-none placeholder:font-light" />
-        <button disabled={busy} className="btn-fluid disabled:opacity-50 shrink-0">{busy ? "…" : "Suivre"}</button>
+        <input value={id} onChange={(e) => setId(e.target.value)} placeholder="MSK-1051 · رقم الطلب" dir="auto" className="flex-1 min-w-0 h-12 bg-[#f5f3ee] rounded-[10px] px-4 uppercase text-sm font-medium outline-none placeholder:font-light" />
+        <button disabled={busy} className="btn-fluid disabled:opacity-50 shrink-0">{busy ? "…" : <><span>Suivre</span> <span dir="rtl" lang="ar">· تتبع</span></>}</button>
       </form>
       {miss && (
         <div className="card-soft p-6 mt-4 text-center">

@@ -1,8 +1,12 @@
 {
-  "name": "Maskulino Admin",
+  "name": "Maskulino — Boutique",
   "short_name": "Maskulino",
-  "start_url": "/imad29052005",
+  "description": "Maskulino — boutique algérienne de vêtements pour homme. Paiement à la livraison.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "dir": "ltr",
+  "lang": "fr",
   "background_color": "#f5f3ee",
   "theme_color": "#1c1b18",
   "icons": [{ "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }]

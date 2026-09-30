@@ -7,6 +7,7 @@ import { COMMUNES } from "@/lib/communes";
 import { ShieldCheck } from "lucide-react";
 import { createOrder } from "@/lib/actions/orders";
 import { getShopContextAction, getActivePromos, resolveCart } from "@/lib/actions/storefront";
+import { FieldLabel } from "@/components/bilingual";
 import type { ShopContext } from "@/lib/storefront";
 
 const FALLBACK: ShopContext = {
@@ -78,7 +79,8 @@ export default function CheckoutPage() {
         <div className="card-soft p-8 md:p-10 text-center">
           <p className="w-14 h-14 rounded-full bg-[#20744d] text-white font-bold text-2xl flex items-center justify-center mx-auto">✓</p>
           <h1 className="font-display font-bold text-3xl mt-4">Commande confirmée !</h1>
-          <p className="text-sm font-light text-stone-600 mt-3 leading-relaxed">Merci {f.name}. Nous vous appellerons au <span className="font-semibold text-stone-900">{f.phone}</span> en moins de 4 h. Total en espèces : <span className="font-bold text-stone-900">{formatDA(done.total)}</span> ({f.ship === "home" ? "à domicile" : "au bureau"} — {wil.name}).</p>
+          <p dir="rtl" lang="ar" className="font-medium text-stone-600 mt-1">شكراً! تم استلام طلبك</p>
+          <p className="text-sm font-light text-stone-600 mt-3 leading-relaxed">Merci <span dir="auto" className="name-auto inline-block font-medium">{f.name}</span>. Nous vous appellerons au <span className="font-semibold text-stone-900" dir="ltr">{f.phone}</span> en moins de 4 h. Total en espèces : <span className="font-bold text-stone-900">{formatDA(done.total)}</span> ({f.ship === "home" ? "à domicile · باب الدار" : "au bureau · المكتب"} — {wil.name}).</p>
           <p className="text-xs font-light text-stone-500 mt-2">N° de suivi : {done.number} — Suivez-le sur la page Suivi.</p>
           <div className="flex flex-wrap gap-2.5 justify-center mt-7">
             <Link href="/track-order" className="btn-fluid">Suivre ma commande</Link>
@@ -90,39 +92,40 @@ export default function CheckoutPage() {
 
   return (
     <div className="container-x py-8 md:py-12 max-w-6xl">
-      <p className="eyebrow">Dernière étape</p>
+      <p className="eyebrow">Dernière étape · <span dir="rtl" lang="ar">الخطوة الأخيرة</span></p>
       <h1 className="section-title mt-2">Finaliser la commande</h1>
+      <p dir="rtl" lang="ar" className="font-medium text-stone-600 mt-1">أكمل طلبك — الدفع عند الاستلام</p>
       <p className="section-sub">Simple : nom, téléphone, wilaya, commune. Paiement en espèces à la réception.</p>
       <div className="grid lg:grid-cols-[1fr_360px] gap-5 mt-6 md:mt-8 items-start">
         <form onSubmit={submit} className="card-soft p-5 md:p-8 space-y-4">
           <div className="grid sm:grid-cols-2 gap-3.5">
-            <label className="text-xs font-semibold">Nom complet *<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="input-soft mt-1.5" placeholder="Ex : Yacine Benali" /></label>
-            <label className="text-xs font-semibold">Téléphone *<input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} inputMode="tel" className="input-soft mt-1.5" placeholder="0550 00 00 00" /></label>
-            <label className="text-xs font-semibold min-w-0">Wilaya *
+            <label className="text-xs font-semibold block"><FieldLabel fr="Nom complet *" ar="الاسم الكامل" /><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} dir="auto" className="input-soft mt-1.5" placeholder="Ex : Yacine Benali · مثال: ياسين" /></label>
+            <label className="text-xs font-semibold block"><FieldLabel fr="Téléphone *" ar="رقم الهاتف" /><input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} inputMode="tel" dir="ltr" className="input-soft mt-1.5" placeholder="0550 00 00 00" /></label>
+            <label className="text-xs font-semibold min-w-0 block"><FieldLabel fr="Wilaya *" ar="الولاية" />
               <select value={f.wilaya} onChange={(e) => setF({ ...f, wilaya: Number(e.target.value), commune: "" })} className="input-soft mt-1.5">
                 {ctx.wilayas.map((w) => <option key={w.code} value={w.code}>{w.name}</option>)}
               </select>
             </label>
-            <label className="text-xs font-semibold min-w-0">Commune *
+            <label className="text-xs font-semibold min-w-0 block"><FieldLabel fr="Commune *" ar="البلدية" />
               <select value={f.commune} onChange={(e) => setF({ ...f, commune: e.target.value })} className="input-soft mt-1.5">
-                <option value="">Sélectionnez…</option>
+                <option value="">Sélectionnez… · اختر…</option>
                 {(COMMUNES[Number(f.wilaya)] ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
-            <label className="text-xs font-semibold sm:col-span-2">Adresse / point de repère<input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} className="input-soft mt-1.5" placeholder="Rue, arrêt de bus, mosquée…" /></label>
+            <label className="text-xs font-semibold sm:col-span-2 block"><FieldLabel fr="Adresse / point de repère" ar="العنوان" /><input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} dir="auto" className="input-soft mt-1.5" placeholder="Rue, arrêt de bus, mosquée… · الشارع، المسجد…" /></label>
           </div>
           <div>
-            <p className="text-xs font-semibold mb-1.5">Mode de livraison</p>
+            <p className="text-xs font-semibold mb-1.5"><FieldLabel fr="Mode de livraison" ar="طريقة التوصيل" /></p>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setF({ ...f, ship: "home" })} className={`py-3.5 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${f.ship === "home" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>À domicile — {formatDA(table?.home ?? 500)}</button>
-              <button type="button" onClick={() => setF({ ...f, ship: "stopdesk" })} className={`py-3.5 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${f.ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>Au bureau — {formatDA(table?.stopdesk ?? table?.home ?? 500)}</button>
+              <button type="button" onClick={() => setF({ ...f, ship: "home" })} className={`py-3 px-2 rounded-[10px] border-[1.5px] text-xs font-semibold transition leading-tight ${f.ship === "home" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}><span className="block">À domicile — {formatDA(table?.home ?? 500)}</span><span dir="rtl" lang="ar" className="block font-medium mt-0.5 opacity-90">باب الدار</span></button>
+              <button type="button" onClick={() => setF({ ...f, ship: "stopdesk" })} className={`py-3 px-2 rounded-[10px] border-[1.5px] text-xs font-semibold transition leading-tight ${f.ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}><span className="block">Au bureau — {formatDA(table?.stopdesk ?? table?.home ?? 500)}</span><span dir="rtl" lang="ar" className="block font-medium mt-0.5 opacity-90">المكتب</span></button>
             </div>
           </div>
-          <label className="text-xs font-semibold block">Code promo (DZ10 = -10 %)
+          <label className="text-xs font-semibold block"><FieldLabel fr="Code promo (DZ10 = -10 %)" ar="رمز التخفيض" />
             <input value={f.promo} onChange={(e) => setF({ ...f, promo: e.target.value })} className="input-soft mt-1.5 uppercase" placeholder="DZ10" />
           </label>
           {err && <p className="text-xs font-medium text-[#c0452f] bg-[#fdf0ec] border border-[#f3d4c8] p-2.5 rounded-[10px]">{err}</p>}
-          <button disabled={busy} className="btn-fluid w-full !py-4 disabled:opacity-50">{busy ? "Envoi…" : <>Confirmer — {formatDA(total)}</>}</button>
+          <button disabled={busy} className="btn-fluid w-full !py-4 disabled:opacity-50">{busy ? "Envoi…" : <>Confirmer — {formatDA(total)} <span dir="rtl" lang="ar">· تأكيد</span></>}</button>
           <p className="flex items-center justify-center gap-1.5 text-[11px] font-light text-stone-500"><ShieldCheck size={13} className="text-[#20744d]" /> Vous ne payez qu'à la réception du colis</p>
         </form>
         <aside className="card-soft p-6 lg:sticky lg:top-24">

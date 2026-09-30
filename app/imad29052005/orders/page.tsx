@@ -124,8 +124,8 @@ function AdminOrdersInner() {
           <p className="font-bold">{o.id}</p>
           <span className="text-[10px] font-medium text-stone-400 whitespace-nowrap">{o.heure}</span>
         </div>
-        <p className="font-medium mt-0.5 truncate">{o.client}</p>
-        <p className="font-light text-stone-500 text-xs truncate">{o.phone}</p>
+        <p className="font-medium mt-0.5 truncate text-center" dir="auto">{o.client}</p>
+        <p className="font-light text-stone-500 text-xs truncate text-center" dir="ltr">{o.phone}</p>
         <p className="font-normal mt-1.5 text-xs truncate">{o.items[0].name} <span className="text-stone-400">· {o.items[0].size} · {o.items[0].color} · ×{o.items[0].qty}</span></p>
         <p className="price-bold mt-1">{fmtDA(o.total)}</p>
         <div className="flex flex-wrap gap-1 mt-2 text-[10px] font-semibold">
@@ -238,7 +238,7 @@ function AdminOrdersInner() {
                 <tr key={o.id} onClick={() => { setSelected(o); setNote(o.note); }} className="border-b border-stone-100 last:border-0 hover:bg-[#faf8f3] cursor-pointer">
                   <td className="pl-4 pr-3 py-3" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={checked.includes(o.id)} onChange={(e) => setChecked(e.target.checked ? [...checked, o.id] : checked.filter((x) => x !== o.id))} /></td>
                   <td className="font-semibold px-3 whitespace-nowrap">{o.id}</td>
-                  <td className="font-normal px-3 max-w-[110px] truncate">{o.client}</td>
+                  <td className="font-normal px-3 max-w-[110px] truncate text-center" dir="auto">{o.client}</td>
                   <td className="font-light text-stone-500 px-3 hidden md:table-cell whitespace-nowrap">{o.phone}</td>
                   <td className="font-normal px-3 hidden lg:table-cell max-w-[160px] truncate">{o.items[0].name} ×{o.items[0].qty}</td>
                   <td className="font-normal px-3 hidden sm:table-cell">{o.wilaya}</td>
@@ -270,7 +270,8 @@ function AdminOrdersInner() {
 
             <div className="card-soft p-4 mt-3">
               <p className="label-bold !text-[10px] text-stone-500">Client</p>
-              <p className="font-semibold text-sm mt-1">{selected.client} · {selected.phone}</p>
+              <p className="font-semibold text-sm mt-1 text-center" dir="auto">{selected.client}</p>
+              <p className="text-xs font-light text-stone-500 mt-0.5 text-center" dir="ltr">{selected.phone}</p>
               <p className="text-xs font-light text-stone-500 mt-0.5">{selected.wilaya} · {selected.commune} · {selected.adresse}{selected.repere ? ` · ${selected.repere}` : ""}</p>
               <div className="flex gap-2 mt-2.5">
               <a href={`tel:${selected.phone.replace(/\D/g, "")}`} className="flex-1 h-11 rounded-[10px] bg-[#1c1b18] text-white text-xs font-semibold flex items-center justify-center gap-1.5"><Phone size={14} /> Appeler</a>

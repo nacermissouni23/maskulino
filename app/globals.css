@@ -204,3 +204,40 @@ body {
 }
 
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ===== Étiquettes bilingues FR (gauche) + AR (droite) ===== */
+.label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+.label-fr {
+  text-align: left;
+  direction: ltr;
+}
+.label-ar {
+  text-align: right;
+  direction: rtl;
+  font-weight: 500;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-family: "Segoe UI", Tahoma, "Noto Kufi Arabic", Arial, sans-serif;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+/* L'arabe ne prend jamais les capitales / espacements Poppins */
+[lang="ar"] {
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+/* Noms saisis en arabe : centrés + sens auto (admin + confirmations) */
+.name-auto {
+  direction: auto;
+  unicode-bidi: plaintext;
+  text-align: center;
+}
+input[dir="auto"], textarea[dir="auto"] {
+  unicode-bidi: plaintext;
+}

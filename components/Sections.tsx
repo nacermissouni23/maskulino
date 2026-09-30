@@ -5,6 +5,7 @@ import { formatDA } from "@/lib/data";
 import { COMMUNES } from "@/lib/communes";
 import { useShipping } from "@/lib/shipping";
 import { createOrder } from "@/lib/actions/orders";
+import { FieldLabel } from "@/components/bilingual";
 import type { ShopProduct, ShopContext } from "@/lib/storefront";
 
 export function TrustBar({ wilayaCount }: { wilayaCount?: number }) {
@@ -75,6 +76,27 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
   const idemRef = useRef<string>("");
 
   const stockOf = (s: string, c: string) => product.stock[s]?.[c] ?? 0;
+
+  // Réservation visuelle (sans écriture DB) : ce que les AUTRES articles ont déjà
+  // pris est soustrait. Rien n'est sauvegardé tant que la commande n'est pas
+  // confirmée — si le client quitte la page, tout redevient disponible.
+  function takenByOthers(s: string, c: string, ai: number) {
+    let n = 0;
+    for (let j = 0; j < articles.length; j++) {
+      if (j !== ai && articles[j].size === s && articles[j].color === c) n++;
+    }
+    return n;
+  }
+  const availFor = (ai: number, s: string, c: string) => stockOf(s, c) - takenByOthers(s, c, ai);
+  // Une taille à 0 partout est CACHÉE (jamais affichée au client).
+  function visibleSizes(ai: number) {
+    return product.sizes.filter((s) => product.colors.some((c) => availFor(ai, s, c) > 0));
+  }
+  // Une couleur à 0 pour la taille choisie est CACHÉE elle aussi.
+  function visibleColors(ai: number, size: string) {
+    if (size) return product.colors.filter((c) => availFor(ai, size, c) > 0);
+    return product.colors.filter((c) => product.sizes.some((s) => availFor(ai, s, c) > 0));
+  }
   const activeCarriers = shipping.carriers;
   const prices = shipping.prices;
   const WILAYAS = shipping.wilayas.length ? shipping.wilayas : [{ code: 16, name: "16 - Alger" }];
@@ -98,14 +120,6 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
   function pickColor(ai: number, c: string) {
     setArticles((arts) => arts.map((a, j) => (j === ai ? { ...a, color: c } : a)));
     onColorChange?.(c);
-  }
-
-  function sizeOut(s: string) {
-    return product.colors.every((c) => stockOf(s, c) <= 0);
-  }
-  function colorOut(c: string, size: string) {
-    if (size) return stockOf(size, c) <= 0;
-    return product.sizes.every((s) => stockOf(s, c) <= 0);
   }
 
   function addArticle() {
@@ -178,10 +192,11 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
     return (
       <div className="bg-[#eef5ef] border border-[#cfe3d3] rounded-2xl p-6 text-center">
         <p className="w-12 h-12 rounded-full bg-[#20744d] text-white font-bold text-xl flex items-center justify-center mx-auto">✓</p>
-        <p className="font-semibold text-lg mt-3">Merci {form.name} ! Commande bien reçue.</p>
+        <p className="font-semibold text-lg mt-3">Merci <span dir="auto" className="name-auto inline-block">{form.name}</span> ! Commande bien reçue.</p>
+        <p dir="rtl" lang="ar" className="text-sm font-medium text-stone-600 mt-1">شكراً! تم استلام طلبك بنجاح</p>
         <p className="text-sm font-light text-stone-600 mt-2 leading-relaxed">
-          {product.name} — {articles.map((a) => `${a.size} · ${a.color}`).join(" | ")} · {carrierName} ({ship === "home" ? "À domicile" : "Stop Desk"}).
-          Nous allons vous appeler sur le <span className="font-semibold text-stone-900">{form.phone}</span> en moins de 4 h pour confirmer.
+          {product.name} — {articles.map((a) => `${a.size} · ${a.color}`).join(" | ")} · {carrierName} ({ship === "home" ? "À domicile · باب الدار" : "Stop Desk · المكتب"}).
+          Nous allons vous appeler sur le <span className="font-semibold text-stone-900" dir="ltr">{form.phone}</span> en moins de 4 h pour confirmer.
           Total à payer en espèces : <span className="font-bold text-stone-900">{formatDA(done.total)}</span>
         </p>
         <p className="text-xs font-light text-stone-500 mt-2">N° de suivi : {done.number} — Suivez-le sur la page Suivi.</p>
@@ -189,46 +204,64 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
       </div>
     );
 
+  const soldOut = visibleSizes(0).length === 0;
+
   return (
     <form onSubmit={submit} className="bg-white border border-[#e8e3d8] rounded-2xl p-5 md:p-6 space-y-4 shadow-[0_10px_28px_rgba(28,27,24,0.06)]">
       <div>
         <p className="font-title font-semibold text-lg">Commander — paiement à la livraison</p>
+        <p dir="rtl" lang="ar" className="text-sm font-medium text-stone-600 mt-1">اطلب الآن — الدفع عند الاستلام</p>
         <p className="text-xs font-light text-stone-500 mt-1">Remplissez le formulaire, on vous confirme par téléphone ou WhatsApp. Aucun prépaiement.</p>
       </div>
+      {soldOut && (
+        <p className="text-xs font-medium text-[#c0452f] bg-[#fdf0ec] border border-[#f3d4c8] p-2.5 rounded-[10px]">Produit épuisé pour le moment — <span dir="rtl" lang="ar">نفد المخزون حالياً</span></p>
+      )}
       <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
-        {articles.map((a, ai) => (
+        {articles.map((a, ai) => {
+          const sizes = visibleSizes(ai);
+          const colors = visibleColors(ai, a.size);
+          return (
           <div key={ai} className="min-[480px]:col-span-2">
             {articles.length > 1 && <p className="text-xs font-semibold mb-1.5">Article {ai + 1}</p>}
-            <p className="text-xs font-semibold mb-1.5">1 · Taille *</p>
+            <p className="text-xs font-semibold mb-1.5"><FieldLabel fr="1 · Taille *" ar="المقاس" /></p>
+            {sizes.length === 0 ? (
+              <p className="text-xs font-light text-stone-500 bg-[#f5f3ee] border border-[#e8e3d8] rounded-[10px] p-3">Tailles épuisées — <span dir="rtl" lang="ar">المقاسات نفدت</span></p>
+            ) : (
             <div className="flex gap-1.5 flex-wrap">
-              {product.sizes.map((s) => (
-                <button type="button" key={s} disabled={sizeOut(s)} onClick={() => pickSize(ai, s)} className={`min-w-11 px-3 h-10 text-xs font-semibold border-[1.5px] rounded-[10px] transition disabled:opacity-30 disabled:cursor-not-allowed ${a.size === s ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8] hover:border-stone-400"}`}>{s}</button>
+              {sizes.map((s) => (
+                <button type="button" key={s} onClick={() => pickSize(ai, s)} className={`min-w-11 px-3 h-10 text-xs font-semibold border-[1.5px] rounded-[10px] transition ${a.size === s ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8] hover:border-stone-400"}`}>{s}</button>
               ))}
             </div>
-            <p className="text-xs font-semibold mb-1.5 mt-3">2 · Couleur *</p>
+            )}
+            <p className="text-xs font-semibold mb-1.5 mt-3"><FieldLabel fr="2 · Couleur *" ar="اللون" /></p>
+            {colors.length === 0 ? (
+              <p className="text-xs font-light text-stone-500 bg-[#f5f3ee] border border-[#e8e3d8] rounded-[10px] p-3">Couleurs épuisées pour cette taille — <span dir="rtl" lang="ar">الألوان نفدت لهذا المقاس</span></p>
+            ) : (
             <div className="flex gap-1.5 flex-wrap">
-              {product.colors.map((c) => (
-                <button type="button" key={c} disabled={colorOut(c, a.size)} onClick={() => pickColor(ai, c)} className={`min-w-11 px-3 h-10 text-xs font-semibold border-[1.5px] rounded-[10px] transition disabled:opacity-30 disabled:cursor-not-allowed ${a.color === c ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8] hover:border-stone-400"}`}>{c}</button>
+              {colors.map((c) => (
+                <button type="button" key={c} onClick={() => pickColor(ai, c)} className={`min-w-11 px-3 h-10 text-xs font-semibold border-[1.5px] rounded-[10px] transition ${a.color === c ? "bg-[#1c1b18] text-white border-[#1c1b18]" : "bg-white border-[#e8e3d8] hover:border-stone-400"}`}>{c}</button>
               ))}
             </div>
+            )}
           </div>
-        ))}
+          );
+        })}
         <div className="min-[480px]:col-span-2 flex items-center gap-3">
           <div className="flex items-center border-[1.5px] border-[#e8e3d8] rounded-[10px] h-11 bg-white">
             <button type="button" onClick={removeArticle} disabled={articles.length <= 1} className="px-3.5 h-full hover:text-[#a06a2c] disabled:opacity-30" aria-label="Retirer un article"><Minus size={16} /></button>
             <span className="w-20 text-center text-xs font-semibold whitespace-nowrap">{articles.length} article{articles.length > 1 ? "s" : ""}</span>
             <button type="button" onClick={addArticle} disabled={articles.length >= 5} className="px-3.5 h-full hover:text-[#a06a2c] disabled:opacity-30" aria-label="Ajouter un article"><Plus size={16} /></button>
           </div>
-          <p className="text-[11px] font-light text-stone-500">Ajoutez un autre article avec une taille / couleur différente.</p>
+          <p className="text-[11px] font-light text-stone-500">Ajoutez un autre article avec une taille / couleur différente. <span dir="rtl" lang="ar">يمكنك إضافة قطعة أخرى</span></p>
         </div>
-        <p className="min-[480px]:col-span-2 text-xs font-semibold">3 · Vos informations</p>
-        <label className="text-xs font-semibold min-w-0">Nom complet *
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex : Yacine Benali" className="input-soft mt-1.5" />
+        <p className="min-[480px]:col-span-2 text-xs font-semibold"><FieldLabel fr="3 · Vos informations" ar="معلوماتك" /></p>
+        <label className="text-xs font-semibold min-w-0 block"><FieldLabel fr="Nom complet *" ar="الاسم الكامل" />
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex : Yacine Benali · مثال: ياسين" dir="auto" className="input-soft mt-1.5" />
         </label>
-        <label className="text-xs font-semibold min-w-0">Téléphone *
-          <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} inputMode="tel" placeholder="0550 00 00 00" className="input-soft mt-1.5" />
+        <label className="text-xs font-semibold min-w-0 block"><FieldLabel fr="Téléphone *" ar="رقم الهاتف" />
+          <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} inputMode="tel" dir="ltr" placeholder="0550 00 00 00" className="input-soft mt-1.5" />
         </label>
-        <label className="text-xs font-semibold min-w-0">Wilaya *
+        <label className="text-xs font-semibold min-w-0 block"><FieldLabel fr="Wilaya *" ar="الولاية" />
           <select value={form.wilaya} onChange={(e) => setForm({ ...form, wilaya: Number(e.target.value), commune: "" })} className="input-soft mt-1.5">
             {WILAYAS.map((w) => {
               const p = prices[carrierId]?.[w.code];
@@ -236,17 +269,17 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
             })}
           </select>
         </label>
-        <label className="text-xs font-semibold min-w-0">Commune *
+        <label className="text-xs font-semibold min-w-0 block"><FieldLabel fr="Commune *" ar="البلدية" />
           <select value={form.commune} onChange={(e) => setForm({ ...form, commune: e.target.value })} className="input-soft mt-1.5">
-            <option value="">Sélectionnez…</option>
+            <option value="">Sélectionnez… · اختر…</option>
             {(COMMUNES[Number(form.wilaya)] ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-        <label className="text-xs font-semibold min-[480px]:col-span-2">Adresse / point de repère
-          <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rue, arrêt de bus, mosquée…" className="input-soft mt-1.5" />
+        <label className="text-xs font-semibold min-[480px]:col-span-2 block"><FieldLabel fr="Adresse / point de repère" ar="العنوان" />
+          <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rue, arrêt de bus, mosquée… · الشارع، المسجد…" dir="auto" className="input-soft mt-1.5" />
         </label>
         <div className="min-[480px]:col-span-2">
-          <p className="text-xs font-semibold mb-1.5">4 · Livraison *</p>
+          <p className="text-xs font-semibold mb-1.5"><FieldLabel fr="4 · Livraison *" ar="طريقة التوصيل" /></p>
           {activeCarriers.length === 0 ? (
             <p className="text-xs font-light text-stone-500 bg-[#f5f3ee] border border-[#e8e3d8] rounded-[10px] p-3">Aucun transporteur disponible pour le moment.</p>
           ) : (
@@ -260,11 +293,15 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
           )}
         </div>
         <div className="min-[480px]:col-span-2 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => setForm({ ...form, ship: "home" })} className={`py-3 rounded-[10px] border-[1.5px] text-xs font-semibold transition ${ship === "home" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
-            À domicile — {formatDA(homePrice)}
+          <button type="button" onClick={() => setForm({ ...form, ship: "home" })} className={`py-3 px-2 rounded-[10px] border-[1.5px] text-xs font-semibold transition leading-tight ${ship === "home" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
+            <span className="block">À domicile — {formatDA(homePrice)}</span>
+            <span dir="rtl" lang="ar" className="block font-medium mt-0.5 opacity-90">باب الدار</span>
           </button>
-          <button type="button" disabled={!stopdeskAvailable} onClick={() => setForm({ ...form, ship: "stopdesk" })} className={`py-3 rounded-[10px] border-[1.5px] text-xs font-semibold transition disabled:opacity-40 ${ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
-            {stopdeskAvailable ? `Stop Desk — ${formatDA(stopdeskPrice!)}` : "Stop Desk — indisponible"}
+          <button type="button" disabled={!stopdeskAvailable} onClick={() => setForm({ ...form, ship: "stopdesk" })} className={`py-3 px-2 rounded-[10px] border-[1.5px] text-xs font-semibold transition disabled:opacity-40 leading-tight ${ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}>
+            {stopdeskAvailable ? (
+              <><span className="block">Stop Desk — {formatDA(stopdeskPrice!)}</span>
+              <span dir="rtl" lang="ar" className="block font-medium mt-0.5 opacity-90">المكتب</span></>
+            ) : "Stop Desk — indisponible"}
           </button>
         </div>
         <div className="min-[480px]:col-span-2 flex items-center justify-between gap-3">
@@ -272,13 +309,13 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
             <p className="font-light text-stone-500 text-xs">{articles.length} article{articles.length > 1 ? "s" : ""} × {formatDA(product.price)}</p>
           </div>
           <div className="text-right">
-            <p className="font-light text-stone-500 text-xs">Produit + livraison</p>
+            <p className="font-light text-stone-500 text-xs">Produit + livraison · <span dir="rtl" lang="ar">المجموع</span></p>
             <p className="font-bold text-xl">{formatDA(total)}</p>
           </div>
         </div>
       </div>
       {err && <p className="text-xs font-medium text-[#c0452f] bg-[#fdf0ec] border border-[#f3d4c8] p-2.5 rounded-[10px]">{err}</p>}
-      <button disabled={busy} className="btn-fluid w-full !py-4 !text-[13px] disabled:opacity-50">{busy ? "Envoi…" : "Confirmer la commande"}</button>
+      <button disabled={busy} className="btn-fluid w-full !py-4 !text-[13px] disabled:opacity-50">{busy ? "Envoi…" : <><span>Confirmer la commande</span><span dir="rtl" lang="ar" className="font-medium">· تأكيد الطلب</span></>}</button>
     </form>
   );
 }

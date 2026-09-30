@@ -42,21 +42,22 @@ export default function ContactPage() {
     <div className="container-x py-10 md:py-14 max-w-4xl">
       <p className="eyebrow">On vous répond en moins de 4 h</p>
       <h1 className="section-title mt-2">Contactez-nous</h1>
+      <p dir="rtl" lang="ar" className="font-medium text-stone-600 mt-1">اتصل بنا — نرد عليك في أقل من 4 ساعات</p>
       <p className="section-sub">Une question ? Écrivez-nous directement sur WhatsApp.</p>
 
       <div className="card-soft p-6 space-y-4 text-sm mt-6 md:mt-8">
         <p className="font-title font-semibold text-base">Nos coordonnées</p>
         <p className="flex gap-3 font-light">
           <span className="w-9 h-9 rounded-xl bg-[#efe9d8] flex items-center justify-center shrink-0"><Phone size={16} className="text-[#7a5a28]" /></span>
-          <span><span className="font-medium">Téléphone / WhatsApp</span><br />{settings.phone} (9h – 20h)</span>
+          <span><span className="font-medium">Téléphone / WhatsApp · <span dir="rtl" lang="ar">الهاتف</span></span><br />{settings.phone} (9h – 20h)</span>
         </p>
         <p className="flex gap-3 font-light">
           <span className="w-9 h-9 rounded-xl bg-[#efe9d8] flex items-center justify-center shrink-0"><MapPin size={16} className="text-[#7a5a28]" /></span>
-          <span><span className="font-medium">Boutique</span><br />{settings.address}</span>
+          <span><span className="font-medium">Boutique · <span dir="rtl" lang="ar">المتجر</span></span><br />{settings.address}</span>
         </p>
         <p className="flex gap-3 font-light">
           <span className="w-9 h-9 rounded-xl bg-[#efe9d8] flex items-center justify-center shrink-0"><Clock size={16} className="text-[#7a5a28]" /></span>
-          <span><span className="font-medium">Horaires</span><br />{settings.hours}</span>
+          <span><span className="font-medium">Horaires · <span dir="rtl" lang="ar">أوقات العمل</span></span><br />{settings.hours}</span>
         </p>
 
         {socials.length > 0 && (

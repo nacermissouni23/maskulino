@@ -128,7 +128,7 @@ export default function AdminCustomers() {
               )}
               {!loading && list.map((c) => (
                 <tr key={c.phone} onClick={() => { setSel(c); setNote(c.note); }} className="border-b border-stone-100 last:border-0 hover:bg-[#faf8f3] cursor-pointer">
-                  <td className="px-4 py-3 font-semibold text-center whitespace-nowrap align-middle">{c.name}</td>
+                  <td className="px-4 py-3 font-semibold text-center whitespace-nowrap align-middle" dir="auto">{c.name}</td>
                   <td className="px-4 py-3 font-normal text-center whitespace-nowrap align-middle">{c.phone}</td>
                   <td className="px-4 py-3 font-normal text-center whitespace-nowrap align-middle">{c.wilaya}</td>
                   <td className="px-4 py-3 text-center font-semibold align-middle">{c.commandes}</td>
@@ -156,9 +156,9 @@ export default function AdminCustomers() {
           <div className="absolute inset-0 bg-black/30" onClick={() => setSel(null)} />
           <aside className="absolute right-0 top-0 h-full w-full sm:w-[400px] bg-[#f5f3ee] shadow-2xl overflow-y-auto p-4 md:p-5">
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-display font-bold text-lg">{sel.name}</p>
-                <p className="text-xs font-light text-stone-500">{sel.phone}</p>
+              <div className="flex-1 min-w-0 text-center">
+                <p className="font-display font-bold text-lg" dir="auto">{sel.name}</p>
+                <p className="text-xs font-light text-stone-500" dir="ltr">{sel.phone}</p>
               </div>
               <button onClick={() => setSel(null)} className="w-9 h-9 rounded-full bg-white border border-[#e8e3d8] flex items-center justify-center"><X size={15} /></button>
             </div>

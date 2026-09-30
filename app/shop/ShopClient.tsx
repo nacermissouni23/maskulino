@@ -42,7 +42,7 @@ export default function ShopPage({ initial, categories }: {
       <div className="card-soft p-3 flex gap-2 mt-6 md:mt-8 sticky top-[68px] z-10">
         <label className="flex-1 flex items-center gap-2 bg-[#f5f3ee] rounded-[10px] px-3">
           <Search size={16} className="text-stone-400 shrink-0" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un sweat, un ensemble…" className="flex-1 h-11 bg-transparent outline-none text-sm font-normal placeholder:font-light" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un sweat, un ensemble… · ابحث…" dir="auto" className="flex-1 h-11 bg-transparent outline-none text-sm font-normal placeholder:font-light" />
         </label>
         <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-11 border-[1.5px] border-[#e8e3d8] rounded-[10px] px-3 text-sm font-medium bg-white shrink-0" aria-label="Trier">
           <option value="pop">Populaires</option>

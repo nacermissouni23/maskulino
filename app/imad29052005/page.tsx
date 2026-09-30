@@ -105,7 +105,7 @@ export default function AdminDashboard() {
               {s.recent.map((o) => (
                 <tr key={o.id} className="border-b border-stone-100 last:border-0">
                   <td className="py-2.5 font-semibold whitespace-nowrap">{o.id}</td>
-                  <td className="font-normal max-w-[110px] truncate">{o.client}</td>
+                  <td className="font-normal max-w-[110px] truncate text-center" dir="auto">{o.client}</td>
                   <td className="font-light text-stone-500 hidden md:table-cell max-w-[160px] truncate">{o.items[0]?.name ?? "—"} ×{o.items[0]?.qty ?? 0}</td>
                   <td className="font-normal hidden md:table-cell">{o.wilaya}</td>
                   <td className="font-bold text-right whitespace-nowrap">{fmtDA(o.total)}</td>
