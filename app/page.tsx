@@ -85,9 +85,9 @@ export default async function Home() {
           <p className="eyebrow text-center">Ils nous font confiance</p>
           <div className="grid md:grid-cols-3 gap-4 md:gap-5 mt-6 md:mt-8">
             {[
-              { n: "Nacer — Saïda", t: "معاملبة مشاء الله, ثقة و صدق, ربي يوفقكم" },
+              { n: "Nacer — Saïda", t: "معاملة مشاء الله, ثقة و صدق, ربي يوفقكم" },
               { n: "Mohamed — Oran", t: "الصور حقيقية، السلعة لي وصلتني كيما شفتها في الموقع" },
-              { n: "Amine — Sétif", t: "توصيل سريع للولاية، خلصت كي وصلتني، تعامل محترم" },
+              { n: "Amine — Sétif", t: "توصيل سريع للولاية، تعامل محترم" },
             ].map((r) => (
               <div key={r.n} className="card-soft p-5 md:p-6">
                 <p className="text-sm font-normal leading-relaxed" dir="auto">« {r.t} »</p>
