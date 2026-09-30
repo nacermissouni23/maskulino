@@ -1,14 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { formatDA } from "@/lib/data";
 import { QuickOrderForm } from "@/components/Sections";
+import { pixelTrack } from "@/lib/pixel";
 import type { ShopProduct, ShopContext } from "@/lib/storefront";
 
 export default function ProductDetailClient({ product, shipping }: { product: ShopProduct; shipping: ShopContext }) {
   const p = product;
   const images = p.gallery.length > 0 ? p.gallery.map((g) => g.src) : [p.image];
   const [activeImg, setActiveImg] = useState(0);
+
+  useEffect(() => {
+    pixelTrack("ViewContent", [{ slug: p.slug, price: p.price }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.slug]);
 
   // La fiche affiche la photo liée à la couleur choisie (lien saisi dans l'admin).
   function onColorChange(color: string) {

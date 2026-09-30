@@ -13,6 +13,7 @@ export type ShopSettings = {
   hours: string;
   hero_title: string;
   hero_subtitle: string;
+  pixel_id: string;
 };
 
 export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
@@ -27,6 +28,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   hours: "Sam – Jeu : 10h – 20h | Ven : 15h – 20h",
   hero_title: "Votre style,\nnotre univers",
   hero_subtitle: "Des vêtements pour homme confortables et modernes, pour un look soigné au quotidien. Explorez nos collections et trouvez les pièces qui vous ressemblent.",
+  pixel_id: "",
 };
 
 const KEY = "maskulino.shop-settings";

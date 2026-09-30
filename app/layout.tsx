@@ -7,6 +7,7 @@ import { ShippingProvider } from "@/lib/shipping";
 import { createClient } from "@/lib/supabase/server";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import PixelTracker from "@/components/PixelTracker";
 
 const poppins = Poppins({
   variable: "--font-sans",
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CartProvider>
           <ShopProvider>
             <ShippingProvider>
+              <PixelTracker />
               <Header />
               <main className="flex-1">{children}</main>
               <Footer />

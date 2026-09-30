@@ -17,12 +17,12 @@ import { Plus, Trash2, Pencil, Bell } from "lucide-react";
 type ShopForm = {
   name: string; phone: string; whatsapp: string; domain: string;
   facebook: string; instagram: string; tiktok: string; address: string; hours: string;
-  hero_title: string; hero_subtitle: string;
+  hero_title: string; hero_subtitle: string; pixel_id: string;
 };
 const EMPTY_SHOP: ShopForm = {
   name: "", phone: "", whatsapp: "", domain: "", facebook: "",
   instagram: "", tiktok: "", address: "", hours: "",
-  hero_title: "", hero_subtitle: "",
+  hero_title: "", hero_subtitle: "", pixel_id: "",
 };
 
 export default function AdminSettings() {
@@ -194,6 +194,13 @@ export default function AdminSettings() {
           <textarea value={shop.hero_title} onChange={(e) => setShop({ ...shop, hero_title: e.target.value })} placeholder={"Votre style,\nnotre univers"} rows={2} className="w-full rounded-[10px] border-[1.5px] border-[#e8e3d8] p-3 text-sm bg-white outline-none focus:border-stone-500 font-semibold" />
           <textarea value={shop.hero_subtitle} onChange={(e) => setShop({ ...shop, hero_subtitle: e.target.value })} placeholder="Des vêtements pour homme confortables et modernes…" rows={3} className="w-full rounded-[10px] border-[1.5px] border-[#e8e3d8] p-3 text-sm bg-white outline-none focus:border-stone-500 font-light" />
         </div>
+        <button onClick={saveShop} className="btn-dark mt-3 !py-2.5">{saved ? "Enregistré ✓" : "Enregistrer"}</button>
+      </div>
+
+      <div className="card-soft p-5 mt-3">
+        <p className="font-title font-semibold text-sm">Meta Pixel — publicités Facebook</p>
+        <p className="text-[11px] font-light text-stone-400 mt-0.5">Collez l&apos;ID du dataset (15 chiffres, Events Manager). Vide = pixel désactivé, le site ne charge rien. Événements envoyés : vue produit, début de commande, achat.</p>
+        <input value={shop.pixel_id} onChange={(e) => setShop({ ...shop, pixel_id: e.target.value.replace(/\D/g, "").slice(0, 30) })} inputMode="numeric" dir="ltr" placeholder="Ex. 123456789012345" className="input-soft mt-3" />
         <button onClick={saveShop} className="btn-dark mt-3 !py-2.5">{saved ? "Enregistré ✓" : "Enregistrer"}</button>
       </div>
 

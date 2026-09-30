@@ -8,6 +8,7 @@ import { ShieldCheck } from "lucide-react";
 import { createOrder } from "@/lib/actions/orders";
 import { getShopContextAction, getActivePromos, resolveCart } from "@/lib/actions/storefront";
 import { FieldLabel } from "@/components/bilingual";
+import { pixelTrack } from "@/lib/pixel";
 import type { ShopContext } from "@/lib/storefront";
 
 const FALLBACK: ShopContext = {
@@ -47,6 +48,7 @@ export default function CheckoutPage() {
     if (!f.commune) return setErr("Sélectionnez votre commune dans la liste.");
     setErr("");
     setBusy(true);
+    pixelTrack("InitiateCheckout", items.map((i) => ({ slug: i.slug, price: i.price, qty: i.qty })));
     const resolved = await resolveCart(items.map((i) => ({ slug: i.slug, size: i.size, qty: i.qty })));
     if (!resolved.ok) {
       setBusy(false);
@@ -70,6 +72,7 @@ export default function CheckoutPage() {
       return setErr("Commande impossible pour le moment — réessayez.");
     }
     clear();
+    pixelTrack("Purchase", items.map((i) => ({ slug: i.slug, price: i.price, qty: i.qty })), res.total);
     setDone({ number: res.number, total: res.total });
   };
 

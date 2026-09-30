@@ -6,6 +6,7 @@ import { COMMUNES } from "@/lib/communes";
 import { useShipping } from "@/lib/shipping";
 import { createOrder } from "@/lib/actions/orders";
 import { FieldLabel } from "@/components/bilingual";
+import { pixelTrack } from "@/lib/pixel";
 import type { ShopProduct, ShopContext } from "@/lib/storefront";
 
 export function TrustBar({ wilayaCount }: { wilayaCount?: number }) {
@@ -164,6 +165,7 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
     if (items.some((i) => !i.variant_id)) return setErr("Variante indisponible — choisissez une autre couleur ou taille.");
     setErr("");
     setBusy(true);
+    pixelTrack("InitiateCheckout", articles.map(() => ({ slug: product.slug, price: product.price })));
     if (!idemRef.current && typeof crypto !== "undefined" && "randomUUID" in crypto) {
       idemRef.current = crypto.randomUUID();
     }
@@ -185,7 +187,7 @@ export function QuickOrderForm({ product, shipping, onColorChange }: {
       return setErr("Commande impossible pour le moment — réessayez.");
     }
     setDone({ number: res.number, total: res.total });
-    (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq?.("track", "Purchase", { value: res.total, currency: "DZD" });
+    pixelTrack("Purchase", articles.map(() => ({ slug: product.slug, price: product.price })), res.total);
   };
 
   if (done)

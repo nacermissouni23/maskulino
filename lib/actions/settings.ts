@@ -89,6 +89,7 @@ const settingsSchema = z.object({
   domain: z.string().max(80), facebook: z.string().max(120), instagram: z.string().max(120),
   tiktok: z.string().max(120), address: z.string().max(120), hours: z.string().max(120),
   hero_title: z.string().max(120).optional(), hero_subtitle: z.string().max(500).optional(),
+  pixel_id: z.string().max(30).optional(),
 });
 
 export async function getShopSettings() {
@@ -103,10 +104,10 @@ export async function saveShopSettings(input: unknown) {
   const admin = createAdminClient();
   const { error } = await admin.from("shop_settings").update(parsed.data).eq("id", 1);
   if (!error) return { ok: true as const };
-  // Colonne hero_* absente (migration 0009 non appliquée) : on sauve le reste.
-  if (String(error.message ?? "").includes("hero_")) {
-    const { hero_title, hero_subtitle, ...rest } = parsed.data;
-    void hero_title; void hero_subtitle;
+  // Colonnes hero_*/pixel_id absentes (migrations non appliquées) : on sauve le reste.
+  if (/hero_|pixel_id/.test(String(error.message ?? ""))) {
+    const { hero_title, hero_subtitle, pixel_id, ...rest } = parsed.data;
+    void hero_title; void hero_subtitle; void pixel_id;
     const { error: e2 } = await admin.from("shop_settings").update(rest).eq("id", 1);
     return { ok: !e2 };
   }
