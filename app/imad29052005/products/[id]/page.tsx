@@ -4,10 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { fmtDA, type AdminProduct, type ProductImage } from "@/lib/admin-data";
-import { listProductsAdmin, saveProduct } from "@/lib/actions/catalog";
+import { listProductsAdmin, saveProduct, deleteProduct } from "@/lib/actions/catalog";
 import { listCategories } from "@/lib/actions/catalog";
 import { COLORS, SIZES, type ColorOption } from "@/lib/catalog-options";
-import { ArrowLeft, Plus, X, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, X, Star, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 
 const LETTER_SET = new Set(SIZES);
 
@@ -72,6 +72,8 @@ function Form({ product }: { product: AdminProduct | null }) {
   const [categories, setCategories] = useState<string[]>(product ? [product.categorie] : []);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     listCategories().then((cs) => {
@@ -300,6 +302,28 @@ function Form({ product }: { product: AdminProduct | null }) {
     </button>
   );
 
+  async function remove() {
+    if (!product || deleting) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeleting(true);
+    setSaveErr("");
+    const res = await deleteProduct(product.id);
+    setDeleting(false);
+    if (!res.ok) {
+      setConfirmDelete(false);
+      setSaveErr(
+        res.code === "HAS_ORDERS"
+          ? "Suppression refusée : des commandes actives contiennent ce produit. Annulez-les d'abord ou passez-le en Brouillon."
+          : "Suppression impossible — réessayez."
+      );
+      return;
+    }
+    router.push("/imad29052005/products");
+  }
+
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -510,6 +534,24 @@ function Form({ product }: { product: AdminProduct | null }) {
           ))}
         </div>
         <div className="mt-3 max-w-md">{saveBtn}</div>
+        {product && (
+          <div className="mt-5 max-w-md border-t border-[#e8e3d8] pt-4">
+            <p className="label-bold !text-[10px] text-stone-500">Zone dangereuse</p>
+            <button
+              onClick={remove}
+              disabled={deleting}
+              className={`mt-2 w-full h-11 rounded-[10px] border-[1.5px] text-xs font-semibold flex items-center justify-center gap-1.5 transition disabled:opacity-50 ${confirmDelete ? "bg-[#c0452f] border-[#c0452f] text-white" : "bg-white border-[#f3d4c8] text-[#c0452f] hover:bg-[#fdf0ec]"}`}
+            >
+              <Trash2 size={14} />
+              {deleting ? "Suppression…" : confirmDelete ? "Cliquez pour confirmer la suppression" : "Supprimer ce produit"}
+            </button>
+            {confirmDelete && !deleting && (
+              <button onClick={() => setConfirmDelete(false)} className="mt-2 w-full text-xs font-medium underline underline-offset-4 text-stone-500">
+                Annuler
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

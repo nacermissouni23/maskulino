@@ -146,6 +146,32 @@ export async function setProductStatus(id: string, statut: "En ligne" | "Brouill
   return { ok: !error };
 }
 
+/** Delete a product with its variants/images. Order history is preserved
+ *  (order_items keeps its name/size/color/qty snapshot, links set null).
+ *  Refuses when an active (non-cancelled, non-returned) order references it. */
+export async function deleteProduct(id: string) {
+  if (!z.string().uuid().safeParse(id).success) return { ok: false as const, code: "BAD_ID" };
+  const admin = createAdminClient();
+  const { data: prod } = await admin.from("products").select("id,name").eq("id", id).maybeSingle();
+  if (!prod) return { ok: false as const, code: "NOT_FOUND" };
+  const { data: refs } = await admin.from("order_items").select("id,orders!inner(status)")
+    .eq("product_id", id).not("orders.status", "in", "(annulee,retournee)").limit(1);
+  if (refs && refs.length > 0) return { ok: false as const, code: "HAS_ORDERS" };
+  // Remove stored images from the bucket (keep external URLs untouched).
+  const { data: imgs } = await admin.from("product_images").select("path").eq("product_id", id);
+  const keys = ((imgs ?? []) as { path: string }[])
+    .map((r) => (r.path.includes("/product-images/") ? r.path.split("/product-images/")[1] : null))
+    .filter((k): k is string => !!k);
+  if (keys.length) await admin.storage.from(BUCKET).remove(keys);
+  const { error } = await admin.from("products").delete().eq("id", id);
+  if (error) return { ok: false as const, code: "DELETE_FAILED" };
+  await admin.from("admin_actions").insert({
+    action: "delete_product",
+    detail: { id, name: (prod as { name: string }).name },
+  });
+  return { ok: true as const };
+}
+
 export async function listCategories(): Promise<string[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("categories").select("name").order("sort").order("name");
