@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal, Search } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
+import { useCoveredWilayaCount } from "@/lib/shipping";
 import type { ShopProduct } from "@/lib/storefront";
 
 function toCard(p: ShopProduct) {
@@ -19,6 +20,7 @@ export default function ShopPage({ initial, categories }: {
 }) {
   const params = useSearchParams();
   const initialCat = params.get("cat") ?? "all";
+  const wilayas = useCoveredWilayaCount();
   const [cat, setCat] = useState(initialCat);
   const [sort, setSort] = useState("pop");
   const [q, setQ] = useState("");
@@ -37,7 +39,7 @@ export default function ShopPage({ initial, categories }: {
     <div className="container-x py-8 md:py-12">
       <p className="eyebrow">Catalogue</p>
       <h1 className="section-title mt-2">La boutique</h1>
-      <p className="section-sub">Paiement à la livraison • 58 wilayas • Livraison en 2 à 5 jours</p>
+      <p className="section-sub">Paiement à la livraison • {wilayas > 0 ? `${wilayas} wilayas` : "toutes wilayas"} • Livraison en 2 à 5 jours</p>
 
       <div className="card-soft p-3 flex gap-2 mt-6 md:mt-8 sticky top-[68px] z-10">
         <label className="flex-1 flex items-center gap-2 bg-[#f5f3ee] rounded-[10px] px-3">

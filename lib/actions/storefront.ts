@@ -1,7 +1,49 @@
 "use server";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getShopContext } from "@/lib/storefront";
+import { getShopContext, getShopCategories, getShopProducts } from "@/lib/storefront";
+
+export async function getShopCategoriesAction() {
+  return getShopCategories();
+}
+
+export type HeroProduct = {
+  slug: string; name: string; price: number; oldPrice?: number; image: string; units: number;
+};
+
+/** Produit du hero : le plus vendu (commandes livrées réelles).
+ *  Si rien n'est vendu : le produit en ligne au plus gros stock. */
+export async function getHeroProduct(): Promise<HeroProduct | null> {
+  const admin = createAdminClient();
+  try {
+    const { data: items } = await admin.from("order_items")
+      .select("product_id,qty,orders!inner(status,is_demo)")
+      .eq("orders.status", "livree").eq("orders.is_demo", false)
+      .not("product_id", "is", null).limit(2000);
+    const sales = new Map<string, number>();
+    for (const it of ((items ?? []) as { product_id: string; qty: number }[])) {
+      sales.set(it.product_id, (sales.get(it.product_id) ?? 0) + it.qty);
+    }
+    if (sales.size > 0) {
+      const topId = [...sales.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      const { data: p } = await admin.from("products")
+        .select("slug,name,price,old_price,principal_image_url")
+        .eq("id", topId).eq("status", "en_ligne").maybeSingle();
+      if (p) {
+        const pr = p as { slug: string; name: string; price: number; old_price: number | null; principal_image_url: string };
+        return {
+          slug: pr.slug, name: pr.name, price: pr.price,
+          oldPrice: pr.old_price ?? undefined, image: pr.principal_image_url,
+          units: sales.get(topId) ?? 0,
+        };
+      }
+    }
+  } catch { /* fallback stock */ }
+  const all = await getShopProducts().catch(() => []);
+  if (!all.length) return null;
+  const top = [...all].sort((a, b) => b.totalStock - a.totalStock)[0];
+  return { slug: top.slug, name: top.name, price: top.price, oldPrice: top.oldPrice, image: top.image, units: 0 };
+}
 
 export async function getShopContextAction() {
   return getShopContext();

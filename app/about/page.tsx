@@ -1,7 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
+import { coveredWilayaCount } from "@/lib/storefront";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const wilayas = await coveredWilayaCount().catch(() => 58);
+  let clients = 0;
+  try {
+    const admin = createAdminClient();
+    const { count } = await admin.from("customers").select("phone", { count: "exact", head: true });
+    clients = count ?? 0;
+  } catch { /* ignore */ }
+  const clientsTxt = clients >= 1000 ? `${(clients / 1000).toFixed(1).replace(".", ",")} k+` : clients > 0 ? `${clients}+` : "12 k+";
   return (
     <div className="container-x py-10 md:py-14 max-w-6xl">
       <p className="eyebrow">Fabriqué à Alger • Depuis 2023</p>
@@ -13,14 +23,14 @@ export default function AboutPage() {
         <div>
           <p className="body-light text-[15px]">
             Tout a commencé sur Facebook avec 20 sweats à Didouche Mourad. Aujourd'hui, plus de
-            12 000 clients dans 58 wilayas, une équipe de confirmation WhatsApp en moins de 4 h,
+            {clientsTxt} clients dans {wilayas} wilayas, une équipe de confirmation WhatsApp en moins de 4 h,
             et un principe simple : <span className="font-medium text-stone-800">vous ne payez que si l'article vous plaît à la réception.</span>
           </p>
           <p className="body-light text-[15px] mt-3">
             Tissus épais, tailles réelles, prix affichés en dinars, échange gratuit sous 7 jours.
           </p>
           <div className="grid grid-cols-3 gap-2.5 mt-6 text-center">
-            {[["58", "Wilayas livrées"], ["12 k+", "Clients satisfaits"], ["4,8/5", "Note moyenne"]].map(([a, b]) => (
+            {[[String(wilayas), "Wilayas livrées"], [clientsTxt, "Clients satisfaits"], ["4,8/5", "Note moyenne"]].map(([a, b]) => (
               <div key={b} className="card-soft p-4"><p className="font-display font-bold text-xl">{a}</p><p className="text-[11px] font-light text-stone-500 mt-1">{b}</p></div>
             ))}
           </div>

@@ -14,8 +14,8 @@ if (!PW) {
 }
 
 const MIGRATIONS = {
-  dev: ["0001_schema.sql", "0002_seed_base.sql", "0003_seed_catalog.sql", "0006_category_slug.sql", "0007_public_tracking.sql", "0005_storage.sql", "0004_seed_demo.sql"],
-  prod: ["0001_schema.sql", "0002_seed_base.sql", "0003_seed_catalog.sql", "0006_category_slug.sql", "0007_public_tracking.sql", "0005_storage.sql", "0008_order_webhook.sql"],
+  dev: ["0001_schema.sql", "0002_seed_base.sql", "0003_seed_catalog.sql", "0006_category_slug.sql", "0007_public_tracking.sql", "0005_storage.sql", "0004_seed_demo.sql", "0009_hero_settings.sql"],
+  prod: ["0001_schema.sql", "0002_seed_base.sql", "0003_seed_catalog.sql", "0006_category_slug.sql", "0007_public_tracking.sql", "0005_storage.sql", "0008_order_webhook.sql", "0009_hero_settings.sql"],
 };
 
 const cmd = process.argv[2];

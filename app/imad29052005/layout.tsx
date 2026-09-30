@@ -218,7 +218,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {permState === "denied" ? (
                   <>Notifications bloquées dans ce navigateur. <span className="font-light text-stone-500">Ouvrez les réglages du site (cadenas / réglages) → Notifications → Autoriser, puis cliquez Réessayer.</span></>
                 ) : permState === "unsupported" ? (
-                  <>Ce navigateur n&apos;affiche pas les notifications. <span className="font-light text-stone-500">Sur iPhone, ajoutez la page à l&apos;écran d&apos;accueil (Partager → Écran d&apos;accueil) puis réactivez. Sinon laissez cette page ouverte : chaque commande sonne ici.</span></>
+                  <>Ce navigateur n&apos;affiche pas les notifications. <span className="font-light text-stone-500">Laissez cette page ouverte : chaque commande sonne ici.</span></>
                 ) : (
                   <>Activer les alertes de commandes ? <span className="font-light text-stone-500">Le navigateur va vous demander d&apos;autoriser. Ensuite : son + vibration avec nom, téléphone, articles et total — même navigateur fermé / téléphone verrouillé.</span></>
                 )}

@@ -1,12 +1,32 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/CartProvider";
 import { formatDA } from "@/lib/data";
+import { useShopSettings, whatsappLink } from "@/lib/shop-settings";
+import { useShipping } from "@/lib/shipping";
+import { getActivePromos } from "@/lib/actions/storefront";
 
 export default function CartPage() {
   const { items, setQty, remove, subtotal, clear } = useCart();
+  const { settings } = useShopSettings();
+  const { carriers, prices } = useShipping();
+  const [promos, setPromos] = useState<{ code: string; type: string; value: number }[]>([]);
+  useEffect(() => {
+    getActivePromos().then(setPromos).catch(() => undefined);
+  }, []);
+  const wa = whatsappLink(settings, "Salam, je veux commander");
+  // Fourchette réelle des frais domicile, calculée depuis les transporteurs actifs.
+  const fees: number[] = [];
+  for (const c of carriers) {
+    if (!c.actif) continue;
+    const table = prices[c.id];
+    if (!table) continue;
+    for (const p of Object.values(table)) if (p.couvert) fees.push(p.home);
+  }
+  const feeTxt = fees.length ? `${formatDA(Math.min(...fees))} à ${formatDA(Math.max(...fees))}` : null;
   const totalQty = items.reduce((s, i) => s + i.qty, 0);
   return (
     <div className="container-x py-8 md:py-12 max-w-5xl">
@@ -49,12 +69,16 @@ export default function CartPage() {
             <p className="text-xs font-light text-stone-500">Hors livraison (selon wilaya)</p>
             <p className="price-bold text-[26px] mt-2">{formatDA(subtotal)}</p>
             <div className="text-xs mt-4 space-y-2 bg-[#f5f3ee] border border-[#e8e3d8] p-3.5 rounded-xl font-normal leading-relaxed">
-              <p>Code <span className="font-bold">DZ10</span> = -10 % (vu sur Facebook)</p>
-              <p>Livraison calculée à l'étape suivante : 250 à 900 DA</p>
+              {promos.length > 0 && promos[0].code ? (
+                <p>Code <span className="font-bold">{promos[0].code}</span> = {promos[0].type === "pourcentage" ? `- ${promos[0].value} %` : `- ${formatDA(promos[0].value)}`} (vu sur Facebook)</p>
+              ) : (
+                <p>Nos codes promo sont partagés sur Facebook</p>
+              )}
+              <p>Livraison calculée à l'étape suivante{feeTxt ? ` : ${feeTxt}` : ""}</p>
               <p>Paiement en espèces à la réception</p>
             </div>
             <Link href="/checkout" className="btn-fluid w-full mt-5">Commander <ArrowRight size={15} /></Link>
-            <a href="https://wa.me/213781510418" className="block text-center text-xs font-semibold mt-3 text-[#20744d] hover:underline underline-offset-4">ou commander via WhatsApp →</a>
+            <a href={wa} target="_blank" rel="noopener noreferrer" className="block text-center text-xs font-semibold mt-3 text-[#20744d] hover:underline underline-offset-4">ou commander via WhatsApp →</a>
           </div>
         </div>
       )}

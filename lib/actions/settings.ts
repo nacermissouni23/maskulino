@@ -88,6 +88,7 @@ const settingsSchema = z.object({
   name: z.string().max(60), phone: z.string().max(30), whatsapp: z.string().max(120),
   domain: z.string().max(80), facebook: z.string().max(120), instagram: z.string().max(120),
   tiktok: z.string().max(120), address: z.string().max(120), hours: z.string().max(120),
+  hero_title: z.string().max(120).optional(), hero_subtitle: z.string().max(500).optional(),
 });
 
 export async function getShopSettings() {
@@ -101,7 +102,15 @@ export async function saveShopSettings(input: unknown) {
   if (!parsed.success) return { ok: false as const };
   const admin = createAdminClient();
   const { error } = await admin.from("shop_settings").update(parsed.data).eq("id", 1);
-  return { ok: !error };
+  if (!error) return { ok: true as const };
+  // Colonne hero_* absente (migration 0009 non appliquée) : on sauve le reste.
+  if (String(error.message ?? "").includes("hero_")) {
+    const { hero_title, hero_subtitle, ...rest } = parsed.data;
+    void hero_title; void hero_subtitle;
+    const { error: e2 } = await admin.from("shop_settings").update(rest).eq("id", 1);
+    return { ok: !e2 };
+  }
+  return { ok: false as const };
 }
 
 // ---------- campaigns & promos ----------

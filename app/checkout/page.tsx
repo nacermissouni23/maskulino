@@ -121,8 +121,8 @@ export default function CheckoutPage() {
               <button type="button" onClick={() => setF({ ...f, ship: "stopdesk" })} className={`py-3 px-2 rounded-[10px] border-[1.5px] text-xs font-semibold transition leading-tight ${f.ship === "stopdesk" ? "border-[#1c1b18] bg-[#1c1b18] text-white" : "border-[#e8e3d8] hover:border-stone-400"}`}><span className="block">Au bureau — {formatDA(table?.stopdesk ?? table?.home ?? 500)}</span><span dir="rtl" lang="ar" className="block font-medium mt-0.5 opacity-90">المكتب</span></button>
             </div>
           </div>
-          <label className="text-xs font-semibold block"><FieldLabel fr="Code promo (DZ10 = -10 %)" ar="رمز التخفيض" />
-            <input value={f.promo} onChange={(e) => setF({ ...f, promo: e.target.value })} className="input-soft mt-1.5 uppercase" placeholder="DZ10" />
+          <label className="text-xs font-semibold block"><FieldLabel fr={`Code promo${promos.length && promos[0].code ? ` (${promos[0].code} = ${promos[0].type === "pourcentage" ? `- ${promos[0].value} %` : `- ${formatDA(promos[0].value)}`})` : ""}`} ar="رمز التخفيض" />
+            <input value={f.promo} onChange={(e) => setF({ ...f, promo: e.target.value })} className="input-soft mt-1.5 uppercase" placeholder={promos.length && promos[0].code ? promos[0].code : "Code promo"} />
           </label>
           {err && <p className="text-xs font-medium text-[#c0452f] bg-[#fdf0ec] border border-[#f3d4c8] p-2.5 rounded-[10px]">{err}</p>}
           <button disabled={busy} className="btn-fluid w-full !py-4 disabled:opacity-50">{busy ? "Envoi…" : <>Confirmer — {formatDA(total)} <span dir="rtl" lang="ar">· تأكيد</span></>}</button>

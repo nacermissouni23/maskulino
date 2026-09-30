@@ -17,10 +17,12 @@ import { Plus, Trash2, Pencil, Bell } from "lucide-react";
 type ShopForm = {
   name: string; phone: string; whatsapp: string; domain: string;
   facebook: string; instagram: string; tiktok: string; address: string; hours: string;
+  hero_title: string; hero_subtitle: string;
 };
 const EMPTY_SHOP: ShopForm = {
   name: "", phone: "", whatsapp: "", domain: "", facebook: "",
   instagram: "", tiktok: "", address: "", hours: "",
+  hero_title: "", hero_subtitle: "",
 };
 
 export default function AdminSettings() {
@@ -181,6 +183,16 @@ export default function AdminSettings() {
           <input value={shop.tiktok} onChange={(e) => setShop({ ...shop, tiktok: e.target.value })} placeholder="TikTok (lien complet)" className="input-soft sm:col-span-2" />
           <input value={shop.address} onChange={(e) => setShop({ ...shop, address: e.target.value })} placeholder="Adresse — ex. Didouche Mourad, Alger" className="input-soft sm:col-span-2" />
           <input value={shop.hours} onChange={(e) => setShop({ ...shop, hours: e.target.value })} placeholder="Horaires" className="input-soft sm:col-span-2" />
+        </div>
+        <button onClick={saveShop} className="btn-dark mt-3 !py-2.5">{saved ? "Enregistré ✓" : "Enregistrer"}</button>
+      </div>
+
+      <div className="card-soft p-5 mt-3">
+        <p className="font-title font-semibold text-sm">Accueil — titre et sous-titre</p>
+        <p className="text-[11px] font-light text-stone-400 mt-0.5">Affichés en haut de la page d&apos;accueil, et repris par Google et les aperçus de lien (WhatsApp, Facebook). Un retour à la ligne dans le titre = un saut de ligne.</p>
+        <div className="grid gap-2 mt-3">
+          <textarea value={shop.hero_title} onChange={(e) => setShop({ ...shop, hero_title: e.target.value })} placeholder={"Votre style,\nnotre univers"} rows={2} className="w-full rounded-[10px] border-[1.5px] border-[#e8e3d8] p-3 text-sm bg-white outline-none focus:border-stone-500 font-semibold" />
+          <textarea value={shop.hero_subtitle} onChange={(e) => setShop({ ...shop, hero_subtitle: e.target.value })} placeholder="Des vêtements pour homme confortables et modernes…" rows={3} className="w-full rounded-[10px] border-[1.5px] border-[#e8e3d8] p-3 text-sm bg-white outline-none focus:border-stone-500 font-light" />
         </div>
         <button onClick={saveShop} className="btn-dark mt-3 !py-2.5">{saved ? "Enregistré ✓" : "Enregistrer"}</button>
       </div>

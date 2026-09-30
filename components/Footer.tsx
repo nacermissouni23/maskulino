@@ -1,8 +1,11 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MapPin, Phone, Clock } from "lucide-react";
 import { useShopSettings } from "@/lib/shop-settings";
+import { useCoveredWilayaCount } from "@/lib/shipping";
+import { getShopCategoriesAction } from "@/lib/actions/storefront";
 
 function FacebookIcon({ size = 16 }: { size?: number }) {
   return (
@@ -33,6 +36,11 @@ function TiktokIcon({ size = 16 }: { size?: number }) {
 export default function Footer() {
   const path = usePathname();
   const { settings } = useShopSettings();
+  const wilayas = useCoveredWilayaCount();
+  const [cats, setCats] = useState<{ slug: string; name: string }[]>([]);
+  useEffect(() => {
+    getShopCategoriesAction().then(setCats).catch(() => undefined);
+  }, []);
   if (path.startsWith("/imad29052005")) return null;
 
   const socials = [
@@ -47,7 +55,7 @@ export default function Footer() {
         <div>
           <p className="font-display font-extrabold text-white text-xl tracking-[0.12em] uppercase">{settings.name}</p>
           <p className="text-sm mt-4 font-light leading-relaxed text-stone-400">
-            Vêtements pour homme pensés pour l'Algérie. Tissus épais, prix honnêtes en dinars, paiement à la livraison dans les 58 wilayas.
+            Vêtements pour homme pensés pour l'Algérie. Tissus épais, prix honnêtes en dinars, paiement à la livraison dans {wilayas > 0 ? `les ${wilayas}` : "toutes les"} wilayas.
           </p>
           {socials.length > 0 && (
             <div className="flex gap-2 mt-5">
@@ -63,15 +71,19 @@ export default function Footer() {
           <p className="text-white font-semibold text-sm tracking-wide mb-4">Boutique</p>
           <ul className="space-y-2.5 text-sm font-light text-stone-400">
             <li><Link href="/shop" className="hover:text-white">Tous les articles</Link></li>
-            <li><Link href="/shop?cat=hoodies" className="hover:text-white">Sweats à capuche</Link></li>
-            <li><Link href="/shop?cat=ensembles" className="hover:text-white">Ensembles</Link></li>
-            <li><Link href="/shop?cat=jeans" className="hover:text-white">Jeans</Link></li>
+            {(cats.length ? cats.slice(0, 3) : [
+              { slug: "hoodies", name: "Sweats à capuche" },
+              { slug: "ensembles", name: "Ensembles" },
+              { slug: "jeans", name: "Jeans" },
+            ]).map((c) => (
+              <li key={c.slug}><Link href={`/shop?cat=${c.slug}`} className="hover:text-white">{c.name}</Link></li>
+            ))}
           </ul>
         </div>
         <div>
           <p className="text-white font-semibold text-sm tracking-wide mb-4">Aide</p>
           <ul className="space-y-2.5 text-sm font-light text-stone-400">
-            <li>Paiement à la livraison — 58 wilayas</li>
+            <li>Paiement à la livraison — {wilayas > 0 ? `${wilayas} wilayas` : "toutes wilayas"}</li>
             <li>Livraison en 2 à 5 jours</li>
             <li><Link href="/contact" className="hover:text-white underline underline-offset-4">Contact et retours</Link></li>
           </ul>

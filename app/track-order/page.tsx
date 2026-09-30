@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PackageSearch, Truck } from "lucide-react";
-import { trackOrder } from "@/lib/actions/storefront";
+import { trackOrder, getShopContextAction } from "@/lib/actions/storefront";
+import { useShopSettings, whatsappLink } from "@/lib/shop-settings";
 
 const STEPS = [
   { t: "Commande confirmée", s: "Appel ou WhatsApp validé" },
@@ -25,6 +26,13 @@ export default function TrackPage() {
   const [busy, setBusy] = useState(false);
   const [miss, setMiss] = useState(false);
   const [found, setFound] = useState<Found | null>(null);
+  const [carriers, setCarriers] = useState<string[]>([]);
+  const { settings } = useShopSettings();
+  const wa = whatsappLink(settings, "Salam, question sur ma commande");
+
+  useEffect(() => {
+    getShopContextAction().then((c) => setCarriers(c.carriers.map((x) => x.nom))).catch(() => undefined);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,7 +51,7 @@ export default function TrackPage() {
 
   return (
     <div className="container-x py-10 md:py-14 max-w-xl">
-      <p className="eyebrow text-center">Livraison Yalidine / ZR Express</p>
+      <p className="eyebrow text-center">{carriers.length ? `Livraison ${carriers.join(" / ")}` : "Suivi de livraison"}</p>
       <h1 className="section-title text-center mt-2">Suivre ma commande</h1>
       <p dir="rtl" lang="ar" className="text-center font-medium text-stone-600 mt-1">تتبع طلبي</p>
       <p className="section-sub text-center">Saisissez votre n° MSK-xxxx (ex : MSK-1051) · <span dir="rtl" lang="ar">أدخل رقم الطلب</span></p>
@@ -80,7 +88,7 @@ export default function TrackPage() {
               ))}
             </div>
           )}
-          <p className="text-xs font-light bg-[#f5f3ee] border border-[#e8e3d8] p-3.5 rounded-xl flex gap-2 leading-relaxed"><Truck size={15} className="shrink-0 mt-0.5" /> Transporteur : {found.carrier ?? "—"}{found.tracking ? ` · ${found.tracking}` : ""} • Préparez le montant exact en espèces ({found.total.toLocaleString("fr-DZ")} DA). <a className="font-semibold underline underline-offset-4" href="https://wa.me/213781510418">WhatsApp</a></p>
+          <p className="text-xs font-light bg-[#f5f3ee] border border-[#e8e3d8] p-3.5 rounded-xl flex gap-2 leading-relaxed"><Truck size={15} className="shrink-0 mt-0.5" /> Transporteur : {found.carrier ?? "—"}{found.tracking ? ` · ${found.tracking}` : ""} • Préparez le montant exact en espèces ({found.total.toLocaleString("fr-DZ")} DA). <a className="font-semibold underline underline-offset-4" href={wa} target="_blank" rel="noopener noreferrer">WhatsApp</a></p>
         </div>
       )}
     </div>

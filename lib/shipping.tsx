@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { WILAYAS } from "@/lib/data";
 
 // Tarifs indicatifs 2025-2026 (colis ≤ 5 kg, départ Alger).
@@ -185,4 +185,21 @@ export function useShipping(): ShippingCtx {
   const c = useContext(Ctx);
   if (!c) throw new Error("useShipping must be used inside ShippingProvider");
   return c;
+}
+
+/** Nombre de wilayas réellement couvertes (au moins un transporteur actif). */
+export function useCoveredWilayaCount(): number {
+  const { carriers, prices } = useShipping();
+  return useMemo(() => {
+    const covered = new Set<number>();
+    for (const c of carriers) {
+      if (!c.actif) continue;
+      const table = prices[c.id];
+      if (!table) continue;
+      for (const [code, p] of Object.entries(table)) {
+        if (p.couvert) covered.add(Number(code));
+      }
+    }
+    return covered.size;
+  }, [carriers, prices]);
 }

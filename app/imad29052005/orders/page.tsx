@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { STATUS_STYLE, fmtDA, type AdminOrder, type AdminOrderStatus } from "@/lib/admin-data";
 import { listOrders, moveOrder, saveDelivery, saveOrderNote } from "@/lib/actions/orders";
+import { getCarriers } from "@/lib/actions/settings";
 import { MessageCircle, Phone, X, Plus, Search } from "lucide-react";
 
 const KANBAN = ["Non confirmé", "Confirmé", "En livraison", "Livré", "Retourné", "Annulée"] as const;
@@ -46,6 +47,7 @@ function AdminOrdersInner() {
   const [note, setNote] = useState("");
   const [shipCarrier, setShipCarrier] = useState("");
   const [shipTracking, setShipTracking] = useState("");
+  const [carrierNames, setCarrierNames] = useState<string[]>([]);
   const deepOpened = useRef(false);
 
   async function refresh(deep?: string | null) {
@@ -62,6 +64,7 @@ function AdminOrdersInner() {
 
   useEffect(() => {
     refresh(params.get("order"));
+    getCarriers().then((cs) => setCarrierNames(cs.filter((c) => c.actif).map((c) => c.nom))).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -176,7 +179,7 @@ function AdminOrdersInner() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-2">
           <select value={fWilaya} onChange={(e) => setFWilaya(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Wilaya : toutes</option>{wilayas.map((w) => <option key={w} value={w}>{w}</option>)}</select>
           <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Statut : tous</option>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-          <select value={fTransport} onChange={(e) => setFTransport(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Transporteur : tous</option><option>Yalidine</option><option>ZR Express</option></select>
+          <select value={fTransport} onChange={(e) => setFTransport(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Transporteur : tous</option>{(carrierNames.length ? carrierNames : ["Yalidine", "ZR Express"]).map((n) => <option key={n}>{n}</option>)}</select>
           <select className="input-soft !h-10 text-[13px]" defaultValue=""><option value="">Produit : tous</option><option>T-Shirt Oversize</option><option>Hoodie</option><option>Ensemble</option></select>
         </div>
       </div>
@@ -305,7 +308,7 @@ function AdminOrdersInner() {
               <p className="text-xs font-normal mt-1.5">{selected.deliveryType} · {selected.wilaya}</p>
               <label className="label-bold !text-[10px] text-stone-500 mt-3 block">Transporteur</label>
               <select value={shipCarrier} onChange={(e) => setShipCarrier(e.target.value)} className="input-soft !h-11 text-xs mt-1.5">
-                <option value="">Choisir…</option><option>Yalidine</option><option>ZR Express</option><option>Autre</option>
+                <option value="">Choisir…</option>{(carrierNames.length ? carrierNames : ["Yalidine", "ZR Express"]).map((n) => <option key={n}>{n}</option>)}<option>Autre</option>
               </select>
               <label className="label-bold !text-[10px] text-stone-500 mt-2.5 block">Code de suivi</label>
               <input value={shipTracking} onChange={(e) => setShipTracking(e.target.value)} placeholder="YD…" className="input-soft !h-11 text-xs mt-1.5" />
