@@ -85,12 +85,12 @@ export default async function Home() {
           <p className="eyebrow text-center">Ils nous font confiance</p>
           <div className="grid md:grid-cols-3 gap-4 md:gap-5 mt-6 md:mt-8">
             {[
-              { n: "Yacine — Alger", t: "L'ensemble taille parfaitement, tissu lourd de qualité. Livré en 2 jours, j'ai payé en espèces. Je recommande." },
-              { n: "Mohamed — Oran", t: "J'hésitais entre XL et XXL, ils m'ont conseillé sur WhatsApp. Échange gratuit, très sérieux." },
-              { n: "Amine — Sétif", t: "Troisième commande. Le sweat ne bouge pas au lavage. Prix en dinars clair, sans surprise." },
+              { n: "Nacer — Saïda", t: "معاملبة مشاء الله, ثقة و صدق, ربي يوفقكم" },
+              { n: "Mohamed — Oran", t: "الصور حقيقية، السلعة لي وصلتني كيما شفتها في الموقع" },
+              { n: "Amine — Sétif", t: "توصيل سريع للولاية، خلصت كي وصلتني، تعامل محترم" },
             ].map((r) => (
               <div key={r.n} className="card-soft p-5 md:p-6">
-                <p className="text-sm font-normal leading-relaxed">« {r.t} »</p>
+                <p className="text-sm font-normal leading-relaxed" dir="auto">« {r.t} »</p>
                 <p className="text-xs font-semibold mt-4 flex items-center gap-1.5"><BadgeCheck size={14} className="text-[#20744d]" /> {r.n}</p>
               </div>
             ))}
