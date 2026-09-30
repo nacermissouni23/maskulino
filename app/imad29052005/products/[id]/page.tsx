@@ -316,7 +316,7 @@ function Form({ product }: { product: AdminProduct | null }) {
       setConfirmDelete(false);
       setSaveErr(
         res.code === "HAS_ORDERS"
-          ? "Suppression refusée : des commandes actives contiennent ce produit. Annulez-les d'abord ou passez-le en Brouillon."
+          ? "Suppression refusée : une commande confirmée réserve encore ce produit. Livrez ou annulez-la d'abord."
           : "Suppression impossible — réessayez."
       );
       return;

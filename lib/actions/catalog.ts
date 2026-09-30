@@ -148,14 +148,17 @@ export async function setProductStatus(id: string, statut: "En ligne" | "Brouill
 
 /** Delete a product with its variants/images. Order history is preserved
  *  (order_items keeps its name/size/color/qty snapshot, links set null).
- *  Refuses when an active (non-cancelled, non-returned) order references it. */
+ *  Refuses only when an order still in the confirmation pipeline
+ *  (confirmée → en livraison) references it — deleting its variants would
+ *  corrupt the stock restore on cancel/return. Delivered / cancelled /
+ *  returned / to-confirm orders are history only and don't block. */
 export async function deleteProduct(id: string) {
   if (!z.string().uuid().safeParse(id).success) return { ok: false as const, code: "BAD_ID" };
   const admin = createAdminClient();
   const { data: prod } = await admin.from("products").select("id,name").eq("id", id).maybeSingle();
   if (!prod) return { ok: false as const, code: "NOT_FOUND" };
-  const { data: refs } = await admin.from("order_items").select("id,orders!inner(status)")
-    .eq("product_id", id).not("orders.status", "in", "(annulee,retournee)").limit(1);
+  const { data: refs } = await admin.from("order_items").select("id,orders!inner(number)")
+    .eq("product_id", id).in("orders.status", ["confirmee", "en_preparation", "expediee", "en_livraison"]).limit(1);
   if (refs && refs.length > 0) return { ok: false as const, code: "HAS_ORDERS" };
   // Remove stored images from the bucket (keep external URLs untouched).
   const { data: imgs } = await admin.from("product_images").select("path").eq("product_id", id);
