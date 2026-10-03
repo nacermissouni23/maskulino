@@ -6,7 +6,9 @@ import Image from "next/image";
 import { STATUS_STYLE, fmtDA, type AdminOrder, type AdminOrderStatus } from "@/lib/admin-data";
 import { listOrders, moveOrder, saveDelivery, saveOrderNote } from "@/lib/actions/orders";
 import { getCarriers } from "@/lib/actions/settings";
-import { MessageCircle, Phone, X, Plus, Search } from "lucide-react";
+import { MessageCircle, Phone, X, Plus, Search, Download } from "lucide-react";
+import { ExportModal, ExportField } from "@/components/admin/ExportModal";
+import { exportOrdersXlsx } from "@/lib/export-excel";
 
 const KANBAN = ["Non confirmé", "Confirmé", "En livraison", "Livré", "Retourné", "Annulée"] as const;
 type KanbanCol = (typeof KANBAN)[number];
@@ -44,6 +46,18 @@ function AdminOrdersInner() {
   const [modal, setModal] = useState<Modal>(null);
   const [toast, setToast] = useState<{ msg: string } | null>(null);
   const [checked, setChecked] = useState<string[]>([]);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [scope, setScope] = useState<"filters" | "selection">("filters");
+  const [eFrom, setEFrom] = useState("");
+  const [eTo, setETo] = useState("");
+  const [eWilaya, setEWilaya] = useState("");
+  const [eStatus, setEStatus] = useState("");
+  const [eTransport, setETransport] = useState("");
+  const [eSource, setESource] = useState("");
+  const [eDelivery, setEDelivery] = useState("");
+  const [ePaiement, setEPaiement] = useState("");
+  const [eProduct, setEProduct] = useState("");
   const [note, setNote] = useState("");
   const [shipCarrier, setShipCarrier] = useState("");
   const [shipTracking, setShipTracking] = useState("");
@@ -82,6 +96,65 @@ function AdminOrdersInner() {
 
   const wilayas = [...new Set(orders.map((o) => o.wilaya))];
   const statuses: AdminOrderStatus[] = ["À confirmer", "Confirmée", "En préparation", "Expédiée", "En livraison", "Livrée", "Retournée", "Annulée"];
+  const sources = [...new Set(orders.map((o) => o.source))];
+  const productNames = [...new Set(orders.flatMap((o) => o.items.map((it) => it.name)))].sort();
+
+  function openExport() {
+    // Pré-remplit avec les filtres déjà actifs sur la page.
+    setEWilaya(fWilaya);
+    setEStatus(fStatus);
+    setETransport(fTransport);
+    setScope(checked.length > 0 ? "selection" : "filters");
+    setExportOpen(true);
+  }
+
+  function presetRange(p: "today" | "7" | "30" | "month" | "all") {
+    const d = new Date();
+    const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+    if (p === "all") { setEFrom(""); setETo(""); return; }
+    if (p === "today") { const t = iso(d); setEFrom(t); setETo(t); return; }
+    if (p === "month") { setEFrom(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`); setETo(iso(d)); return; }
+    const days = p === "7" ? 6 : 29;
+    setETo(iso(d));
+    setEFrom(iso(new Date(d.getTime() - days * 86400000)));
+  }
+
+  function resetExportFilters() {
+    setEFrom(""); setETo(""); setEWilaya(""); setEStatus(""); setETransport("");
+    setESource(""); setEDelivery(""); setEPaiement(""); setEProduct("");
+  }
+
+  const exportRows = useMemo(() => {
+    if (scope === "selection") return orders.filter((o) => checked.includes(o.id));
+    const ql = q.toLowerCase();
+    const from = eFrom ? new Date(`${eFrom}T00:00:00`) : null;
+    const to = eTo ? new Date(`${eTo}T23:59:59`) : null;
+    return orders.filter((o) =>
+      (!q || (o.client + o.phone + o.id + o.tracking).toLowerCase().includes(ql)) &&
+      (!eWilaya || o.wilaya === eWilaya) &&
+      (!eStatus || o.status === eStatus) &&
+      (!eTransport || o.transporteur === eTransport) &&
+      (!eSource || o.source === eSource) &&
+      (!eDelivery || o.deliveryType === eDelivery) &&
+      (!ePaiement || o.paiement === ePaiement) &&
+      (!eProduct || o.items.some((it) => it.name === eProduct)) &&
+      (!from || !o.createdAt || new Date(o.createdAt) >= from) &&
+      (!to || !o.createdAt || new Date(o.createdAt) <= to)
+    );
+  }, [orders, scope, checked, q, eWilaya, eStatus, eTransport, eSource, eDelivery, ePaiement, eProduct, eFrom, eTo]);
+
+  async function doExport() {
+    if (exportRows.length === 0 || downloading) return;
+    setDownloading(true);
+    try {
+      const name = await exportOrdersXlsx(exportRows);
+      setExportOpen(false);
+      setToast({ msg: `Fichier téléchargé : ${name}` });
+    } catch {
+      setToast({ msg: "Export impossible — réessayez" });
+    }
+    setDownloading(false);
+  }
 
   async function applyMove(order: AdminOrder, target: AdminOrderStatus) {
     const res = await moveOrder({ orderNumber: order.id, to: target });
@@ -167,6 +240,7 @@ function AdminOrdersInner() {
               </button>
             ))}
           </div>
+          <button onClick={openExport} className="h-10 px-4 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold flex items-center gap-1.5 hover:border-stone-400 whitespace-nowrap"><Download size={15} /> <span className="hidden sm:inline">Exporter Excel</span><span className="sm:hidden">Excel</span></button>
           <Link href="/" className="btn-fluid !py-3 flex items-center gap-1.5"><Plus size={15} /> <span className="hidden sm:inline">Nouvelle commande</span><span className="sm:hidden">Nouvelle</span></Link>
         </div>
       </div>
@@ -228,7 +302,7 @@ function AdminOrdersInner() {
               {checked.length} sélectionnée(s)
               <button onClick={async () => { const ids = [...checked]; setChecked([]); for (const id of ids) { const o = orders.find((x) => x.id === id); if (o) await moveOrder({ orderNumber: id, to: "Confirmée" }); } await refresh(); }} className="h-8 px-3 rounded-lg bg-white text-black">Confirmer</button>
               <button onClick={async () => { const n = checked.length; const ids = [...checked]; setChecked([]); for (const id of ids) { await moveOrder({ orderNumber: id, to: "Annulée" }); } await refresh(); setToast({ msg: `${n} commande(s) annulée(s)` }); }} className="h-8 px-3 rounded-lg border border-white/40">Annuler</button>
-              <button className="h-8 px-3 rounded-lg border border-white/40">Exporter</button>
+              <button onClick={openExport} className="h-8 px-3 rounded-lg border border-white/40">Exporter</button>
             </div>
           )}
           <table className="w-full text-xs">
@@ -254,6 +328,83 @@ function AdminOrdersInner() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {exportOpen && (
+        <ExportModal
+          title="Exporter les commandes"
+          countLabel={`≈ ${exportRows.length} ligne${exportRows.length > 1 ? "s" : ""} seront exportées (1 ligne = 1 commande).`}
+          downloading={downloading}
+          canDownload={exportRows.length > 0}
+          emptyHint="Aucune commande avec ces filtres — élargissez la période ou effacez un filtre."
+          onClose={() => setExportOpen(false)}
+          onDownload={doExport}
+        >
+          {checked.length > 0 && (
+            <div className="flex h-10 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white p-1 text-xs font-semibold">
+              {(["filters", "selection"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setScope(s)}
+                  className={`px-4 h-full rounded-lg flex-1 transition ${scope === s ? "bg-[#1c1b18] text-white" : "text-stone-500"}`}
+                >
+                  {s === "filters" ? "Filtres actuels" : `Sélection (${checked.length})`}
+                </button>
+              ))}
+            </div>
+          )}
+          {scope === "filters" && (
+            <>
+              <div>
+                <span className="label-bold !text-[10px] text-stone-500">Période</span>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {([["today", "Aujourd'hui"], ["7", "7 jours"], ["30", "30 jours"], ["month", "Ce mois"], ["all", "Tout"]] as const).map(([v, l]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => presetRange(v)}
+                      className="h-8 px-3 rounded-full text-[11px] font-semibold border border-[#e8e3d8] bg-white hover:border-stone-400"
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <input type="date" value={eFrom} onChange={(e) => setEFrom(e.target.value)} aria-label="Date début" className="input-soft !h-10 text-[13px]" />
+                  <input type="date" value={eTo} onChange={(e) => setETo(e.target.value)} aria-label="Date fin" className="input-soft !h-10 text-[13px]" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <ExportField label="Statut">
+                  <select value={eStatus} onChange={(e) => setEStatus(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Tous</option>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                </ExportField>
+                <ExportField label="Wilaya">
+                  <select value={eWilaya} onChange={(e) => setEWilaya(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Toutes</option>{wilayas.map((w) => <option key={w} value={w}>{w}</option>)}</select>
+                </ExportField>
+                <ExportField label="Transporteur">
+                  <select value={eTransport} onChange={(e) => setETransport(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Tous</option>{(carrierNames.length ? carrierNames : ["Yalidine", "ZR Express"]).map((n) => <option key={n}>{n}</option>)}</select>
+                </ExportField>
+                <ExportField label="Produit">
+                  <select value={eProduct} onChange={(e) => setEProduct(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Tous</option>{productNames.map((n) => <option key={n} value={n}>{n}</option>)}</select>
+                </ExportField>
+                <ExportField label="Source">
+                  <select value={eSource} onChange={(e) => setESource(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Toutes</option>{sources.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                </ExportField>
+                <ExportField label="Type livraison">
+                  <select value={eDelivery} onChange={(e) => setEDelivery(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Tous</option><option>Domicile</option><option>Stop Desk</option></select>
+                </ExportField>
+                <ExportField label="Paiement">
+                  <select value={ePaiement} onChange={(e) => setEPaiement(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Tous</option><option>En attente</option><option>Encaissé</option><option>Reversé</option></select>
+                </ExportField>
+              </div>
+              <p className="text-[11px] font-light text-stone-500">Recherche texte de la page prise en compte (« {q || "—"} »).</p>
+              <button type="button" onClick={resetExportFilters} className="text-[11px] font-semibold underline underline-offset-4 text-stone-600 hover:text-stone-900">
+                Effacer les filtres d&apos;export
+              </button>
+            </>
+          )}
+        </ExportModal>
       )}
 
       {selected && (

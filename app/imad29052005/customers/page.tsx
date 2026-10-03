@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { fmtDA, type AdminClient } from "@/lib/admin-data";
 import { listCustomers, saveCustomerNote } from "@/lib/actions/orders";
-import { Phone, MessageCircle, X, Search } from "lucide-react";
+import { Phone, MessageCircle, X, Search, Download } from "lucide-react";
+import { ExportModal, ExportField } from "@/components/admin/ExportModal";
+import { exportClientsXlsx } from "@/lib/export-excel";
 
 const norm = (s: string) => s.toLowerCase().trim();
 const normPhone = (s: string) => s.replace(/[\s.-]/g, "").toLowerCase();
@@ -16,6 +18,13 @@ export default function AdminCustomers() {
   const [clients, setClients] = useState<AdminClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [doneMsg, setDoneMsg] = useState("");
+  const [eName, setEName] = useState("");
+  const [ePhone, setEPhone] = useState("");
+  const [eWilaya, setEWilaya] = useState("");
+  const [eProfil, setEProfil] = useState("");
 
   useEffect(() => {
     listCustomers().then((c) => { setClients(c as AdminClient[]); setLoading(false); }).catch(() => setLoading(false));
@@ -33,6 +42,36 @@ export default function AdminCustomers() {
   const hasFilter = qName !== "" || qPhone !== "" || qWilaya !== "";
   const reset = () => { setQName(""); setQPhone(""); setQWilaya(""); };
 
+  function openExport() {
+    // Pré-remplit avec les filtres déjà actifs sur la page.
+    setEName(qName);
+    setEPhone(qPhone);
+    setEWilaya(qWilaya);
+    setDoneMsg("");
+    setExportOpen(true);
+  }
+
+  const exportRows = useMemo(() => clients.filter((c) =>
+    (!norm(eName) || norm(c.name).includes(norm(eName))) &&
+    (!normPhone(ePhone) || normPhone(c.phone).includes(normPhone(ePhone))) &&
+    (!norm(eWilaya) || norm(c.wilaya).includes(norm(eWilaya))) &&
+    (!eProfil ||
+      (eProfil === "fideles" ? c.livrees >= 3 : eProfil === "risque" ? (c.annulees >= 3 || c.retours >= 1) : c.commandes <= 1))
+  ), [clients, eName, ePhone, eWilaya, eProfil]);
+
+  async function doExport() {
+    if (exportRows.length === 0 || downloading) return;
+    setDownloading(true);
+    try {
+      const name = await exportClientsXlsx(exportRows);
+      setExportOpen(false);
+      setDoneMsg(`Fichier téléchargé : ${name}`);
+    } catch {
+      setDoneMsg("Export impossible — réessayez.");
+    }
+    setDownloading(false);
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -40,7 +79,11 @@ export default function AdminCustomers() {
           <h1 className="section-title">Clients</h1>
           <p className="section-sub">Créés automatiquement depuis les commandes. Le téléphone est l&apos;identifiant.</p>
         </div>
+        <button onClick={openExport} className="h-10 px-4 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold flex items-center gap-1.5 hover:border-stone-400 whitespace-nowrap"><Download size={15} /> <span className="hidden sm:inline">Exporter Excel</span><span className="sm:hidden">Excel</span></button>
       </div>
+      {doneMsg && (
+        <p className="text-xs font-medium text-[#20744d] mt-3">{doneMsg}</p>
+      )}
 
       <form onSubmit={(e) => e.preventDefault()} className="card-soft p-3 mt-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -150,6 +193,41 @@ export default function AdminCustomers() {
             </tbody>
           </table>
       </div>
+
+      {exportOpen && (
+        <ExportModal
+          title="Exporter les clients"
+          countLabel={`≈ ${exportRows.length} client${exportRows.length > 1 ? "s" : ""} seront exportés (triés par total dépensé).`}
+          downloading={downloading}
+          canDownload={exportRows.length > 0}
+          emptyHint="Aucun client avec ces filtres — élargissez la recherche."
+          onClose={() => setExportOpen(false)}
+          onDownload={doExport}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <ExportField label="Nom">
+              <input value={eName} onChange={(e) => setEName(e.target.value)} placeholder="Nom du client…" className="input-soft !h-10 text-[13px]" />
+            </ExportField>
+            <ExportField label="Téléphone">
+              <input value={ePhone} onChange={(e) => setEPhone(e.target.value)} placeholder="Téléphone… ex. 0550" inputMode="tel" className="input-soft !h-10 text-[13px]" />
+            </ExportField>
+            <ExportField label="Wilaya">
+              <input value={eWilaya} onChange={(e) => setEWilaya(e.target.value)} placeholder="Wilaya… ex. Alger" list="export-clients-wilaya" className="input-soft !h-10 text-[13px]" />
+            </ExportField>
+            <ExportField label="Profil">
+              <select value={eProfil} onChange={(e) => setEProfil(e.target.value)} className="input-soft !h-10 text-[13px]">
+                <option value="">Tous</option>
+                <option value="fideles">Fidèles (≥ 3 livrées)</option>
+                <option value="risque">À risque (≥ 3 annulations ou ≥ 1 retour)</option>
+                <option value="nouveaux">Nouveaux (1 commande)</option>
+              </select>
+            </ExportField>
+          </div>
+          <datalist id="export-clients-wilaya">
+            {wilayas.map((w) => <option key={w} value={w} />)}
+          </datalist>
+        </ExportModal>
+      )}
 
       {sel && (
         <div className="fixed inset-0 z-40">

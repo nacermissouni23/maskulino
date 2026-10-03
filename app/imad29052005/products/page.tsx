@@ -7,7 +7,9 @@ import { fmtDA, type AdminProduct } from "@/lib/admin-data";
 import { listProductsAdmin, setProductStatus } from "@/lib/actions/catalog";
 import { adjustStock } from "@/lib/actions/orders";
 import { hexOf } from "@/lib/catalog-options";
-import { Plus, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, Download } from "lucide-react";
+import { ExportModal, ExportField } from "@/components/admin/ExportModal";
+import { exportCatalogueXlsx, productState } from "@/lib/export-excel";
 
 function CatalogueInner() {
   const params = useSearchParams();
@@ -20,6 +22,12 @@ function CatalogueInner() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, number>>({});
   const [stockReason, setStockReason] = useState("reception");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [doneMsg, setDoneMsg] = useState("");
+  const [eCat, setECat] = useState("");
+  const [eStatut, setEStatut] = useState("");
+  const [eEtat, setEEtat] = useState("");
 
   async function refresh() {
     const list = await listProductsAdmin().catch(() => [] as AdminProduct[]);
@@ -33,6 +41,39 @@ function CatalogueInner() {
   const list = useMemo(() => products.filter((p) =>
     (!q || p.name.toLowerCase().includes(q.toLowerCase())) && (!fStatut || p.statut === fStatut) && (!fCat || p.categorie === fCat)
   ), [products, q, fStatut, fCat]);
+
+  function openExport() {
+    // Pré-remplit avec les filtres déjà actifs sur la page.
+    setECat(fCat);
+    setEStatut(fStatut);
+    setDoneMsg("");
+    setExportOpen(true);
+  }
+
+  const exportRows = useMemo(() => products.filter((p) =>
+    (!q || p.name.toLowerCase().includes(q.toLowerCase())) &&
+    (!eCat || p.categorie === eCat) &&
+    (!eStatut || p.statut === eStatut) &&
+    (!eEtat || productState(p) === eEtat)
+  ), [products, q, eCat, eStatut, eEtat]);
+
+  const exportVariants = useMemo(
+    () => exportRows.reduce((a, p) => a + p.variants.length, 0),
+    [exportRows]
+  );
+
+  async function doExport() {
+    if (exportRows.length === 0 || downloading) return;
+    setDownloading(true);
+    try {
+      const name = await exportCatalogueXlsx(exportRows);
+      setExportOpen(false);
+      setDoneMsg(`Fichier téléchargé : ${name}`);
+    } catch {
+      setDoneMsg("Export impossible — réessayez.");
+    }
+    setDownloading(false);
+  }
 
   const statutStyle = (s: string) => s === "En ligne" ? "bg-[#e7efe9] text-[#20744d]" : s === "Brouillon" ? "bg-[#f5eedd] text-[#7a5a28]" : "bg-[#fbeae4] text-[#c0452f]";
   const etatStyle = (e: string) => e === "Disponible" ? "bg-[#e7efe9] text-[#20744d]" : e === "Stock faible" ? "bg-[#f5eedd] text-[#7a5a28]" : "bg-[#fbeae4] text-[#c0452f]";
@@ -72,8 +113,14 @@ function CatalogueInner() {
           <h1 className="section-title">Catalogue</h1>
           <p className="section-sub">Produits et stock au même endroit.</p>
         </div>
-        <Link href="/imad29052005/products/new" className="btn-fluid !py-3 flex items-center gap-1.5"><Plus size={15} /> Ajouter un produit</Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={openExport} className="h-[46px] px-5 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 hover:border-stone-400 whitespace-nowrap"><Download size={15} /> <span className="hidden sm:inline">Exporter Excel</span><span className="sm:hidden">Excel</span></button>
+          <Link href="/imad29052005/products/new" className="btn-fluid !py-3 flex items-center gap-1.5"><Plus size={15} /> Ajouter un produit</Link>
+        </div>
       </div>
+      {doneMsg && (
+        <p className="text-xs font-medium text-[#20744d] mt-3">{doneMsg}</p>
+      )}
 
       <div className="flex h-10 rounded-[10px] border-[1.5px] border-[#e8e3d8] bg-white p-1 text-xs font-semibold w-fit mt-4">
         {(["produits", "stock"] as const).map((t) => (
@@ -174,6 +221,31 @@ function CatalogueInner() {
               </tbody>
             </table>
         </div>
+      )}
+
+      {exportOpen && (
+        <ExportModal
+          title="Exporter le catalogue"
+          countLabel={`≈ ${exportRows.length} produit${exportRows.length > 1 ? "s" : ""} + ${exportVariants} variante${exportVariants > 1 ? "s" : ""} (2 onglets : Produits + Stock détail).`}
+          downloading={downloading}
+          canDownload={exportRows.length > 0}
+          emptyHint="Aucun produit avec ces filtres — élargissez la recherche."
+          onClose={() => setExportOpen(false)}
+          onDownload={doExport}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <ExportField label="Catégorie">
+              <select value={eCat} onChange={(e) => setECat(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Toutes</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+            </ExportField>
+            <ExportField label="Statut">
+              <select value={eStatut} onChange={(e) => setEStatut(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Tous</option><option>En ligne</option><option>Brouillon</option><option>Rupture</option></select>
+            </ExportField>
+            <ExportField label="État stock">
+              <select value={eEtat} onChange={(e) => setEEtat(e.target.value)} className="input-soft !h-10 text-[13px]"><option value="">Tous</option><option>Disponible</option><option>Stock faible</option><option>Rupture</option></select>
+            </ExportField>
+          </div>
+          <p className="text-[11px] font-light text-stone-500">Recherche de la page prise en compte (« {q || "—"} »).</p>
+        </ExportModal>
       )}
     </div>
   );

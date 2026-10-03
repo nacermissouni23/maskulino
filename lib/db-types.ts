@@ -66,6 +66,7 @@ export function dbOrderToAdmin(o: DbOrder): AdminOrder {
     tracking: o.tracking,
     date: new Date(o.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
     heure: new Date(o.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+    createdAt: o.created_at,
     tentatives: [],
     note: o.note,
     historique: (o.order_events ?? []).map((e) => ({

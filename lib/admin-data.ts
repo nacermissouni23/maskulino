@@ -47,6 +47,8 @@ export type AdminOrder = {
   tracking: string;
   date: string;
   heure: string;
+  /** ISO timestamp (Supabase created_at). Present on real rows; used for export date filters. */
+  createdAt?: string;
   tentatives: ConfirmAttempt[];
   note: string;
   historique: HistoryEvent[];
